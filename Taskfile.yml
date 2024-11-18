@@ -1,0 +1,39 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars: {}
+
+tasks:
+  tools:
+    desc: Install dependencies
+    run: once
+    deps: [brew]
+    cmds:
+      - pre-commit install
+
+  brew:
+    desc: Install dependencies with brew
+    internal: true
+    platforms: [darwin]
+    cmd: brew bundle
+    status:
+      - brew bundle check --verbose
+
+  go-test:
+    desc: Run go tests
+    aliases: [got]
+    cmd: gotestsum
+
+  go-test-watch:
+    desc: Run go tests with coverage and watch
+    aliases: [gotw]
+    cmd: gotestsum --watch -- -coverprofile=coverage.out ./...
+
+  go-test-coverage:
+    desc: Run go tests and display coverage
+    aliases: [gotc]
+    cmds:
+      - gotestsum -- -coverprofile=coverage.out ./...
+      - go tool cover -func coverage.out
+      - go tool cover -html coverage.out
