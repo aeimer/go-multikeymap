@@ -54,27 +54,6 @@ func (m *MultiKeyMap[K, V]) HasPrimaryKey(primaryKey K) bool {
 	return exists
 }
 
-// HasKey checks if any key exists (primary or secondary).
-func (m *MultiKeyMap[K, V]) HasKey(key interface{}) bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	switch v := key.(type) {
-	case K:
-		_, exists := m.primary[v]
-		return exists
-	case string:
-		for _, group := range m.secondary {
-			if _, exists := group[v]; exists {
-				return true
-			}
-		}
-		return false
-	default:
-		return false
-	}
-}
-
 // HasSecondaryKey checks if a secondary key exists in a specific group.
 func (m *MultiKeyMap[K, V]) HasSecondaryKey(group string, key string) bool {
 	m.mu.RLock()
@@ -84,16 +63,6 @@ func (m *MultiKeyMap[K, V]) HasSecondaryKey(group string, key string) bool {
 		return exists
 	}
 	return false
-}
-
-// GetKeyGroups returns all key groups for a given primary key.
-func (m *MultiKeyMap[K, V]) GetKeyGroups(primaryKey K) map[string]string {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	if groups, exists := m.secondaryTo[primaryKey]; exists {
-		return groups
-	}
-	return nil
 }
 
 // GetAllKeyGroups returns all key groups and their secondary keys.
