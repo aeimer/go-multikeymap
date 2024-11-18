@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches-ignore:
+      - release-please--branches--main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: install gotestsum
+        run: go install gotest.tools/gotestsum@v1.12.0
+      - name: test
+        run:
+          gotestsum
+          --format testname
+          --
+          ./...
+          -json
+          -tags=integration
+          -coverprofile="coverage.out"
+      - name: coverage
+        run: |
+          # Sanitize coverage.out
+          # Remove entries that should be ignore for coverage
+          # => https://dev.to/talalyousif/excluding-files-from-code-coverage-in-go-291f
+          mv coverage.out coverage.orig.out
+          grep -v -E -f .covignore coverage.orig.out > coverage.out
+          go tool cover -func coverage.out | tee coverage.txt
+
+  golangci:
+    permissions:
+      contents: read
+    name: Linter
+    runs-on: qa-gh-runner-small
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.60
+
+  tidy:
+    name: go.mod is tidy
+    runs-on: qa-gh-runner-small
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          cache: false
+          go-version-file: go.mod
+      - name: diff tidy
+        run: go mod tidy -diff

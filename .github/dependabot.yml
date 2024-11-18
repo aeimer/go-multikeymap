@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    assignees:
+      - aeimer
+    commit-message:
+      prefix: fix
+      prefix-development: chore
+      include: scope
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    assignees:
+      - aeimer
+    commit-message:
+      prefix: fix
+      prefix-development: chore
+      include: scope
