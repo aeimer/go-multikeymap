@@ -41,7 +41,7 @@ jobs:
     permissions:
       contents: read
     name: Linter
-    runs-on: qa-gh-runner-small
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -54,7 +54,7 @@ jobs:
 
   tidy:
     name: go.mod is tidy
-    runs-on: qa-gh-runner-small
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
