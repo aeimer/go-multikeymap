@@ -3,7 +3,7 @@
 See docs: https://pkg.go.dev/github.com/aeimer/go-multikeymap
 
 A go lib which handles maps with multiple keys.
-The libs are go routine safe.
+Both data-structures are go routine safe.
 
 * **MultiKeyMap** is a data structure based on go native maps.
 It has a primary key which directly maps to the values.
