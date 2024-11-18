@@ -1,5 +1,7 @@
 # go-multikeymap
 
+See docs: https://pkg.go.dev/github.com/aeimer/go-multikeymap
+
 A go lib which handles maps with multiple keys.
 
 * **MuliKeyMap** is a data structure based on go native maps.
