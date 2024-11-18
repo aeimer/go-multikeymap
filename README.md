@@ -2,6 +2,8 @@
 
 See docs: https://pkg.go.dev/github.com/aeimer/go-multikeymap
 
+DISCLAIMER: Until version 1 is reached, the API may change.
+
 A go lib which handles maps with multiple keys.
 Both data-structures are go routine safe.
 
