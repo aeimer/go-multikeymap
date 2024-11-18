@@ -28,3 +28,4 @@ go.work.sum
 *.iml
 .idea/
 .vscode/
+Brewfile.lock.json
