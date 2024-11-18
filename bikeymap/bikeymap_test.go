@@ -105,6 +105,30 @@ func TestBiKeyMap_DeleteByKeyB(t *testing.T) {
 	}
 }
 
+func TestBiKeyMap_String(t *testing.T) {
+	bm := NewBiKeyMap[string, int, string]()
+	_ = bm.Set("keyA1", 1, "value1")
+	expected := "BiKeyMap: map[keyA1:value1]"
+	if bm.String() != expected {
+		t.Errorf("expected %s, got %s", expected, bm.String())
+	}
+}
+
+func TestBiKeyMap_DeleteByKeyA_NotFound(t *testing.T) {
+	bm := NewBiKeyMap[string, int, string]()
+	err := bm.DeleteByKeyA("nonExistentKey")
+	if err == nil {
+		t.Error("expected error, got nil")
+	}
+}
+
+func TestBiKeyMap_DeleteByKeyB_NotFound(t *testing.T) {
+	bm := NewBiKeyMap[string, int, string]()
+	err := bm.DeleteByKeyB(999)
+	if err == nil {
+		t.Error("expected error, got nil")
+	}
+}
 func TestBiKeyMap_EmptyAndSize(t *testing.T) {
 	bm := NewBiKeyMap[string, int, string]()
 

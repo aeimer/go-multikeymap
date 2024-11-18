@@ -79,6 +79,36 @@ func TestMultiKeyMap_Delete(t *testing.T) {
 	}
 }
 
+func TestMultiKeyMap_GetAllKeyGroups(t *testing.T) {
+	mm := NewMultiKeyMap[string, int]()
+	mm.Add("key1", 1)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1", "secKey2")
+	mm.Add("key2", 2)
+	mm.AddSecondaryKeys("key2", "group2", "secKey3")
+	allGroups := mm.GetAllKeyGroups()
+	if len(allGroups) != 2 || len(allGroups["group1"]) != 2 || len(allGroups["group2"]) != 1 {
+		t.Errorf("expected allGroups to contain 'group1' and 'group2' with correct keys, got %v", allGroups)
+	}
+}
+
+func TestMultiKeyMap_GetBySecondaryKey_NotFound(t *testing.T) {
+	mm := NewMultiKeyMap[string, int]()
+	mm.Add("key1", 1)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1")
+	if _, exists := mm.GetBySecondaryKey("group1", "nonExistentKey"); exists {
+		t.Error("expected 'nonExistentKey' to not be found")
+	}
+}
+
+func TestMultiKeyMap_String(t *testing.T) {
+	mm := NewMultiKeyMap[string, int]()
+	mm.Add("key1", 1)
+	expected := "MultiKeyMap: map[key1:1]"
+	if mm.String() != expected {
+		t.Errorf("expected %s, got %s", expected, mm.String())
+	}
+}
+
 func TestMultiKeyMap_Size(t *testing.T) {
 	mm := NewMultiKeyMap[string, int]()
 	mm.Add("key1", 1)
