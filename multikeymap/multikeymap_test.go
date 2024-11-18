@@ -2,9 +2,10 @@ package multikeymap
 
 import (
 	"fmt"
-	"github.com/aeimer/go-multikeymap/container"
 	"sync"
 	"testing"
+
+	"github.com/aeimer/go-multikeymap/container"
 )
 
 func ExampleNewMultiKeyMap() {

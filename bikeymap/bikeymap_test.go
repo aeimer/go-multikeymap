@@ -2,9 +2,10 @@ package bikeymap
 
 import (
 	"fmt"
-	"github.com/aeimer/go-multikeymap/container"
 	"sync"
 	"testing"
+
+	"github.com/aeimer/go-multikeymap/container"
 )
 
 func ExampleNewBiKeyMap() {
@@ -67,7 +68,7 @@ func TestBiKeyMap_SetDuplicateKeys(t *testing.T) {
 func TestBiKeyMap_DeleteByKeyA(t *testing.T) {
 	bm := NewBiKeyMap[string, int, string]()
 
-	bm.Set("keyA1", 1, "value1")
+	_ = bm.Set("keyA1", 1, "value1")
 	err := bm.DeleteByKeyA("keyA1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -87,7 +88,7 @@ func TestBiKeyMap_DeleteByKeyA(t *testing.T) {
 func TestBiKeyMap_DeleteByKeyB(t *testing.T) {
 	bm := NewBiKeyMap[string, int, string]()
 
-	bm.Set("keyA1", 1, "value1")
+	_ = bm.Set("keyA1", 1, "value1")
 	err := bm.DeleteByKeyB(1)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -111,7 +112,7 @@ func TestBiKeyMap_EmptyAndSize(t *testing.T) {
 		t.Error("expected map to be empty")
 	}
 
-	bm.Set("keyA1", 1, "value1")
+	_ = bm.Set("keyA1", 1, "value1")
 	if bm.Empty() {
 		t.Error("expected map to not be empty")
 	}
@@ -124,8 +125,8 @@ func TestBiKeyMap_EmptyAndSize(t *testing.T) {
 func TestBiKeyMap_Clear(t *testing.T) {
 	bm := NewBiKeyMap[string, int, string]()
 
-	bm.Set("keyA1", 1, "value1")
-	bm.Set("keyA2", 2, "value2")
+	_ = bm.Set("keyA1", 1, "value1")
+	_ = bm.Set("keyA2", 2, "value2")
 	bm.Clear()
 
 	if !bm.Empty() {
@@ -140,8 +141,8 @@ func TestBiKeyMap_Clear(t *testing.T) {
 func TestBiKeyMap_Values(t *testing.T) {
 	bm := NewBiKeyMap[string, int, string]()
 
-	bm.Set("keyA1", 1, "value1")
-	bm.Set("keyA2", 2, "value2")
+	_ = bm.Set("keyA1", 1, "value1")
+	_ = bm.Set("keyA2", 2, "value2")
 
 	values := bm.Values()
 	if len(values) != 2 {
