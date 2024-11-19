@@ -16,3 +16,7 @@ The access is O(1+1+1) => O(1) due to the underlying hashmap.
 * **BiKeyMap** is a stricter version of MultiKeyMap.
 It has KeyA and KeyB, both need to be unique.
 The access is O(1+1) => O(1) due to the underlying hashmap.
+
+## Star history
+
+[![Star History](https://api.star-history.com/svg?repos=aeimer/go-multikeymap&type=Date)](https://star-history.com/#aeimer/go-multikeymap&Date)
