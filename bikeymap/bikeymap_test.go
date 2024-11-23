@@ -248,7 +248,12 @@ func TestBiKeyMap_ConcurrentAccess(t *testing.T) {
 
 // Benchmarks
 
-func benchmarkGet(b *testing.B, m *BiKeyMap[string, int, string], size int) {
+func benchmarkGet(b *testing.B, size int) {
+	m := NewBiKeyMap[string, int, string]()
+	for n := 0; n < size; n++ {
+		_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
+	}
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for n := 0; n < size; n++ {
 			m.GetByKeyA(strconv.Itoa(n))
@@ -257,46 +262,85 @@ func benchmarkGet(b *testing.B, m *BiKeyMap[string, int, string], size int) {
 	}
 }
 
-func BenchmarkBiKeyMapGet100(b *testing.B) {
-	b.StopTimer()
-	size := 100
+func benchmarkPut(b *testing.B, size int) {
+	m := NewBiKeyMap[string, int, string]()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for n := 0; n < size; n++ {
+			_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
+		}
+	}
+}
+
+func benchmarkRemove(b *testing.B, size int) {
 	m := NewBiKeyMap[string, int, string]()
 	for n := 0; n < size; n++ {
 		_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
 	}
-	b.StartTimer()
-	benchmarkGet(b, m, size)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for n := 0; n < size; n++ {
+			_ = m.RemoveByKeyB(n)
+		}
+	}
+}
+
+func BenchmarkBiKeyMapGet100(b *testing.B) {
+	size := 100
+	benchmarkGet(b, size)
 }
 
 func BenchmarkBiKeyMapGet1000(b *testing.B) {
-	b.StopTimer()
-	size := 1000
-	m := NewBiKeyMap[string, int, string]()
-	for n := 0; n < size; n++ {
-		_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
-	}
-	b.StartTimer()
-	benchmarkGet(b, m, size)
+	size := 1_000
+	benchmarkGet(b, size)
 }
 
 func BenchmarkBiKeyMapGet10000(b *testing.B) {
-	b.StopTimer()
-	size := 1000
-	m := NewBiKeyMap[string, int, string]()
-	for n := 0; n < size; n++ {
-		_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
-	}
-	b.StartTimer()
-	benchmarkGet(b, m, size)
+	size := 10_000
+	benchmarkGet(b, size)
 }
 
 func BenchmarkBiKeyMapGet100000(b *testing.B) {
-	b.StopTimer()
-	size := 1000
-	m := NewBiKeyMap[string, int, string]()
-	for n := 0; n < size; n++ {
-		_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
-	}
-	b.StartTimer()
-	benchmarkGet(b, m, size)
+	size := 100_000
+	benchmarkGet(b, size)
+}
+
+func BenchmarkBiKeyMapPut100(b *testing.B) {
+	size := 100
+	benchmarkPut(b, size)
+}
+
+func BenchmarkBiKeyMapPut1000(b *testing.B) {
+	size := 1_000
+	benchmarkPut(b, size)
+}
+
+func BenchmarkBiKeyMapPut10000(b *testing.B) {
+	size := 10_000
+	benchmarkPut(b, size)
+}
+
+func BenchmarkBiKeyMapPut100000(b *testing.B) {
+	size := 100_000
+	benchmarkPut(b, size)
+}
+
+func BenchmarkBiKeyMapRemove100(b *testing.B) {
+	size := 100
+	benchmarkRemove(b, size)
+}
+
+func BenchmarkBiKeyMapRemove1000(b *testing.B) {
+	size := 1_000
+	benchmarkRemove(b, size)
+}
+
+func BenchmarkBiKeyMapRemove10000(b *testing.B) {
+	size := 10_000
+	benchmarkRemove(b, size)
+}
+
+func BenchmarkBiKeyMapRemove100000(b *testing.B) {
+	size := 100_000
+	benchmarkRemove(b, size)
 }
