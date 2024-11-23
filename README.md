@@ -1,4 +1,4 @@
-# go-multikeymap
+# multikeymap
 
 See docs: https://pkg.go.dev/github.com/aeimer/go-multikeymap
 
@@ -16,6 +16,58 @@ The access is O(1+1+1) => O(1) due to the underlying hashmap.
 * **BiKeyMap** is a stricter version of MultiKeyMap.
 It has KeyA and KeyB, both need to be unique.
 The access is O(1+1) => O(1) due to the underlying hashmap.
+
+## MultiKeyMap
+
+This map has a generic primary key and multiple string secondary keys.
+You can use it like this:
+
+```go
+type City struct {
+    Name string
+    Population int
+}
+mm := NewMultiKeyMap[string, City]()
+mm.Set("Berlin", City{"Berlin", 3_500_000})
+mm.SetSecondaryKeys("Berlin", "postcode", "10115", "10117", "10119")
+mm.Get("Berlin") // City{"Berlin", 3_500_000}
+mm.GetBySecondaryKey("postcode", "10115") // City{"Berlin", 3_500_000}
+```
+
+# BiKeyMap
+
+This map has two generic keys, both need to be unique.
+You can use it like this:
+
+```go
+type City struct {
+    Name string
+    Population int
+}
+// keyA: Cityname, keyB: Population
+bm := NewBiKeyMap[string, int, City]()
+bm.Set("Berlin", 3_500_000, City{"Berlin", 3_500_000})
+bm.Set("Hamburg", 1_800_000, City{"Hamburg", 1_800_000})
+b.GetByKeyA("Berlin") // City{"Berlin", 3_500_000}
+b.GetByKeyB(1_800_000) // City{"Hamburg", 1_800_000}
+```
+
+## Contribution
+
+Feel free to contribute by opening issues or pull requests.
+To set up the project, you need to have go installed.
+Then you can run the following commands:
+
+```bash
+# List Taskfile tasks
+task
+
+# Install dependencies
+task tools
+
+# Run tests
+task go-test
+```
 
 ## Star history
 
