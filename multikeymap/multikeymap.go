@@ -23,15 +23,15 @@ func NewMultiKeyMap[K comparable, V any]() *MultiKeyMap[K, V] {
 	}
 }
 
-// Add inserts a value with a primary key.
-func (m *MultiKeyMap[K, V]) Add(primaryKey K, value V) {
+// Set inserts a value with a primary key.
+func (m *MultiKeyMap[K, V]) Set(primaryKey K, value V) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.primary[primaryKey] = value
 }
 
-// AddSecondaryKeys adds secondary keys under a group for a primary key.
-func (m *MultiKeyMap[K, V]) AddSecondaryKeys(primaryKey K, group string, keys ...string) {
+// SetSecondaryKeys adds secondary keys under a group for a primary key.
+func (m *MultiKeyMap[K, V]) SetSecondaryKeys(primaryKey K, group string, keys ...string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.secondary[group] == nil {
