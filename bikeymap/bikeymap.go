@@ -15,8 +15,8 @@ type BiKeyMap[KeyA comparable, KeyB comparable, V any] struct {
 	keyBByKeyA map[KeyA]KeyB
 }
 
-// NewBiKeyMap creates a new instance of BiKeyMap.
-func NewBiKeyMap[KeyA comparable, KeyB comparable, V any]() *BiKeyMap[KeyA, KeyB, V] {
+// New creates a new instance of BiKeyMap.
+func New[KeyA comparable, KeyB comparable, V any]() *BiKeyMap[KeyA, KeyB, V] {
 	return &BiKeyMap[KeyA, KeyB, V]{
 		dataByKeyA: make(map[KeyA]V),
 		keyAByKeyB: make(map[KeyB]KeyA),

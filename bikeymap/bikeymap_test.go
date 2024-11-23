@@ -9,8 +9,8 @@ import (
 	"github.com/aeimer/go-multikeymap/container"
 )
 
-func ExampleNewBiKeyMap() {
-	bm := NewBiKeyMap[string, int, string]()
+func ExampleNew() {
+	bm := New[string, int, string]()
 	_ = bm.Put("keyA1", 1, "value1")
 	value, exists := bm.GetByKeyA("keyA1")
 	fmt.Printf("[Key A] value: %v, exists: %v\n", value, exists)
@@ -22,14 +22,14 @@ func ExampleNewBiKeyMap() {
 }
 
 func TestBiKeyMap_ImplementsContainerInterface(t *testing.T) {
-	instance := NewBiKeyMap[int, int, int]()
+	instance := New[int, int, int]()
 	if _, ok := any(instance).(container.Container[int]); !ok {
 		t.Error("BiKeyMap does not implement the Container interface")
 	}
 }
 
 func TestBiKeyMap_SetAndGet(t *testing.T) {
-	bm := NewBiKeyMap[string, int, string]()
+	bm := New[string, int, string]()
 
 	err := bm.Put("keyA1", 1, "value1")
 	if err != nil {
@@ -48,7 +48,7 @@ func TestBiKeyMap_SetAndGet(t *testing.T) {
 }
 
 func TestBiKeyMap_SetDuplicateKeys(t *testing.T) {
-	bm := NewBiKeyMap[string, int, string]()
+	bm := New[string, int, string]()
 
 	err := bm.Put("keyA1", 1, "value1")
 	if err != nil {
@@ -67,7 +67,7 @@ func TestBiKeyMap_SetDuplicateKeys(t *testing.T) {
 }
 
 func TestBiKeyMap_RemoveByKeyA(t *testing.T) {
-	bm := NewBiKeyMap[string, int, string]()
+	bm := New[string, int, string]()
 
 	_ = bm.Put("keyA1", 1, "value1")
 	err := bm.RemoveByKeyA("keyA1")
@@ -87,7 +87,7 @@ func TestBiKeyMap_RemoveByKeyA(t *testing.T) {
 }
 
 func TestBiKeyMap_RemoveByKeyB(t *testing.T) {
-	bm := NewBiKeyMap[string, int, string]()
+	bm := New[string, int, string]()
 
 	_ = bm.Put("keyA1", 1, "value1")
 	err := bm.RemoveByKeyB(1)
@@ -107,7 +107,7 @@ func TestBiKeyMap_RemoveByKeyB(t *testing.T) {
 }
 
 func TestBiKeyMap_String(t *testing.T) {
-	bm := NewBiKeyMap[string, int, string]()
+	bm := New[string, int, string]()
 	_ = bm.Put("keyA1", 1, "value1")
 	expected := "BiKeyMap: map[keyA1:value1]"
 	if bm.String() != expected {
@@ -116,7 +116,7 @@ func TestBiKeyMap_String(t *testing.T) {
 }
 
 func TestBiKeyMap_RemoveByKeyA_NotFound(t *testing.T) {
-	bm := NewBiKeyMap[string, int, string]()
+	bm := New[string, int, string]()
 	err := bm.RemoveByKeyA("nonExistentKey")
 	if err == nil {
 		t.Error("expected error, got nil")
@@ -124,14 +124,14 @@ func TestBiKeyMap_RemoveByKeyA_NotFound(t *testing.T) {
 }
 
 func TestBiKeyMap_RemoveByKeyB_NotFound(t *testing.T) {
-	bm := NewBiKeyMap[string, int, string]()
+	bm := New[string, int, string]()
 	err := bm.RemoveByKeyB(999)
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
 }
 func TestBiKeyMap_EmptyAndSize(t *testing.T) {
-	bm := NewBiKeyMap[string, int, string]()
+	bm := New[string, int, string]()
 
 	if !bm.Empty() {
 		t.Error("expected map to be empty")
@@ -148,7 +148,7 @@ func TestBiKeyMap_EmptyAndSize(t *testing.T) {
 }
 
 func TestBiKeyMap_Clear(t *testing.T) {
-	bm := NewBiKeyMap[string, int, string]()
+	bm := New[string, int, string]()
 
 	_ = bm.Put("keyA1", 1, "value1")
 	_ = bm.Put("keyA2", 2, "value2")
@@ -164,7 +164,7 @@ func TestBiKeyMap_Clear(t *testing.T) {
 }
 
 func TestBiKeyMap_Values(t *testing.T) {
-	bm := NewBiKeyMap[string, int, string]()
+	bm := New[string, int, string]()
 
 	_ = bm.Put("keyA1", 1, "value1")
 	_ = bm.Put("keyA2", 2, "value2")
@@ -183,7 +183,7 @@ func TestBiKeyMap_Values(t *testing.T) {
 }
 
 func TestBiKeyMap_ConcurrentAccess(t *testing.T) {
-	bm := NewBiKeyMap[string, int, string]()
+	bm := New[string, int, string]()
 	var wg sync.WaitGroup
 	const numGoroutines = 100
 
@@ -249,7 +249,7 @@ func TestBiKeyMap_ConcurrentAccess(t *testing.T) {
 // Benchmarks
 
 func benchmarkGet(b *testing.B, size int) {
-	m := NewBiKeyMap[string, int, string]()
+	m := New[string, int, string]()
 	for n := 0; n < size; n++ {
 		_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
 	}
@@ -263,7 +263,7 @@ func benchmarkGet(b *testing.B, size int) {
 }
 
 func benchmarkPut(b *testing.B, size int) {
-	m := NewBiKeyMap[string, int, string]()
+	m := New[string, int, string]()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for n := 0; n < size; n++ {
@@ -273,7 +273,7 @@ func benchmarkPut(b *testing.B, size int) {
 }
 
 func benchmarkRemove(b *testing.B, size int) {
-	m := NewBiKeyMap[string, int, string]()
+	m := New[string, int, string]()
 	for n := 0; n < size; n++ {
 		_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
 	}

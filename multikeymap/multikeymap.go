@@ -14,8 +14,8 @@ type MultiKeyMap[K comparable, V any] struct {
 	secondaryTo map[K]map[string]string // PrimaryKey -> Group -> SecondaryKey
 }
 
-// NewMultiKeyMap creates a new MultiKeyMap instance.
-func NewMultiKeyMap[K comparable, V any]() *MultiKeyMap[K, V] {
+// New creates a new MultiKeyMap instance.
+func New[K comparable, V any]() *MultiKeyMap[K, V] {
 	return &MultiKeyMap[K, V]{
 		primary:     make(map[K]V),
 		secondary:   make(map[string]map[string]K),

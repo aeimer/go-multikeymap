@@ -9,8 +9,8 @@ import (
 	"github.com/aeimer/go-multikeymap/container"
 )
 
-func ExampleNewMultiKeyMap() {
-	mm := NewMultiKeyMap[string, int]()
+func ExampleNew() {
+	mm := New[string, int]()
 	mm.Put("keyA1", 1)
 	mm.PutSecondaryKeys("keyA1", "group1", "key1", "key2")
 	mm.PutSecondaryKeys("keyA1", "group2", "key3", "key4")
@@ -25,14 +25,14 @@ func ExampleNewMultiKeyMap() {
 }
 
 func TestMultiKeyMap_ImplementsContainerInterface(t *testing.T) {
-	instance := NewMultiKeyMap[int, int]()
+	instance := New[int, int]()
 	if _, ok := any(instance).(container.Container[int]); !ok {
 		t.Error("MultiKeyMap does not implement the Container interface")
 	}
 }
 
 func TestMultiKeyMap_SetAndGet(t *testing.T) {
-	mm := NewMultiKeyMap[string, int]()
+	mm := New[string, int]()
 	mm.Put("key1", 1)
 	value, exists := mm.Get("key1")
 	if !exists || value != 1 {
@@ -41,7 +41,7 @@ func TestMultiKeyMap_SetAndGet(t *testing.T) {
 }
 
 func TestMultiKeyMap_SetSecondaryKeys(t *testing.T) {
-	mm := NewMultiKeyMap[string, int]()
+	mm := New[string, int]()
 	mm.Put("key1", 1)
 	mm.PutSecondaryKeys("key1", "group1", "secKey1", "secKey2")
 	value, exists := mm.GetBySecondaryKey("group1", "secKey1")
@@ -51,7 +51,7 @@ func TestMultiKeyMap_SetSecondaryKeys(t *testing.T) {
 }
 
 func TestMultiKeyMap_HasPrimaryKey(t *testing.T) {
-	mm := NewMultiKeyMap[string, int]()
+	mm := New[string, int]()
 	mm.Put("key1", 1)
 	if !mm.HasPrimaryKey("key1") {
 		t.Error("expected primary key 'key1' to exist")
@@ -59,7 +59,7 @@ func TestMultiKeyMap_HasPrimaryKey(t *testing.T) {
 }
 
 func TestMultiKeyMap_HasSecondaryKey(t *testing.T) {
-	mm := NewMultiKeyMap[string, int]()
+	mm := New[string, int]()
 	mm.Put("key1", 1)
 	mm.PutSecondaryKeys("key1", "group1", "secKey1")
 	if !mm.HasSecondaryKey("group1", "secKey1") {
@@ -68,7 +68,7 @@ func TestMultiKeyMap_HasSecondaryKey(t *testing.T) {
 }
 
 func TestMultiKeyMap_Remove(t *testing.T) {
-	mm := NewMultiKeyMap[string, int]()
+	mm := New[string, int]()
 	mm.Put("key1", 1)
 	mm.PutSecondaryKeys("key1", "group1", "secKey1")
 	mm.Remove("key1")
@@ -81,7 +81,7 @@ func TestMultiKeyMap_Remove(t *testing.T) {
 }
 
 func TestMultiKeyMap_GetAllKeyGroups(t *testing.T) {
-	mm := NewMultiKeyMap[string, int]()
+	mm := New[string, int]()
 	mm.Put("key1", 1)
 	mm.PutSecondaryKeys("key1", "group1", "secKey1", "secKey2")
 	mm.Put("key2", 2)
@@ -93,7 +93,7 @@ func TestMultiKeyMap_GetAllKeyGroups(t *testing.T) {
 }
 
 func TestMultiKeyMap_GetBySecondaryKey_NotFound(t *testing.T) {
-	mm := NewMultiKeyMap[string, int]()
+	mm := New[string, int]()
 	mm.Put("key1", 1)
 	mm.PutSecondaryKeys("key1", "group1", "secKey1")
 	if _, exists := mm.GetBySecondaryKey("group1", "nonExistentKey"); exists {
@@ -102,7 +102,7 @@ func TestMultiKeyMap_GetBySecondaryKey_NotFound(t *testing.T) {
 }
 
 func TestMultiKeyMap_String(t *testing.T) {
-	mm := NewMultiKeyMap[string, int]()
+	mm := New[string, int]()
 	mm.Put("key1", 1)
 	expected := "MultiKeyMap: map[key1:1]"
 	if mm.String() != expected {
@@ -111,7 +111,7 @@ func TestMultiKeyMap_String(t *testing.T) {
 }
 
 func TestMultiKeyMap_Size(t *testing.T) {
-	mm := NewMultiKeyMap[string, int]()
+	mm := New[string, int]()
 	mm.Put("key1", 1)
 	mm.Put("key2", 2)
 	if mm.Size() != 2 {
@@ -120,7 +120,7 @@ func TestMultiKeyMap_Size(t *testing.T) {
 }
 
 func TestMultiKeyMap_Empty(t *testing.T) {
-	mm := NewMultiKeyMap[string, int]()
+	mm := New[string, int]()
 	if !mm.Empty() {
 		t.Error("expected map to be empty")
 	}
@@ -131,7 +131,7 @@ func TestMultiKeyMap_Empty(t *testing.T) {
 }
 
 func TestMultiKeyMap_Values(t *testing.T) {
-	mm := NewMultiKeyMap[string, int]()
+	mm := New[string, int]()
 	mm.Put("key1", 1)
 	mm.Put("key2", 2)
 	values := mm.Values()
@@ -144,7 +144,7 @@ func TestMultiKeyMap_Values(t *testing.T) {
 }
 
 func TestMultiKeyMap_Clear(t *testing.T) {
-	mm := NewMultiKeyMap[string, int]()
+	mm := New[string, int]()
 	mm.Put("key1", 1)
 	mm.Clear()
 	if !mm.Empty() {
@@ -153,7 +153,7 @@ func TestMultiKeyMap_Clear(t *testing.T) {
 }
 
 func TestMultiKeyMap_ConcurrentAccess(t *testing.T) {
-	mm := NewMultiKeyMap[string, int]()
+	mm := New[string, int]()
 	var wg sync.WaitGroup
 	const numGoroutines = 100
 
@@ -205,7 +205,7 @@ func TestMultiKeyMap_ConcurrentAccess(t *testing.T) {
 // Benchmarks
 
 func benchmarkGet(b *testing.B, size int) {
-	m := NewMultiKeyMap[string, int]()
+	m := New[string, int]()
 	for n := 0; n < size; n++ {
 		m.Put(strconv.Itoa(n), n)
 	}
@@ -218,7 +218,7 @@ func benchmarkGet(b *testing.B, size int) {
 }
 
 func benchmarkPut(b *testing.B, size int) {
-	m := NewMultiKeyMap[string, int]()
+	m := New[string, int]()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for n := 0; n < size; n++ {
@@ -228,7 +228,7 @@ func benchmarkPut(b *testing.B, size int) {
 }
 
 func benchmarkRemove(b *testing.B, size int) {
-	m := NewMultiKeyMap[string, int]()
+	m := New[string, int]()
 	for n := 0; n < size; n++ {
 		m.Put(strconv.Itoa(n), n)
 	}
