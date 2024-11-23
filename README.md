@@ -23,15 +23,21 @@ This map has a generic primary key and multiple string secondary keys.
 You can use it like this:
 
 ```go
-type City struct {
-    Name string
-    Population int
+package main
+
+import "github.com/aeimer/go-multikeymap/multikeymap"
+
+func main() {
+	type City struct {
+		Name       string
+		Population int
+	}
+	mm := multikeymap.NewMultiKeyMap[string, City]()
+	mm.Put("Berlin", City{"Berlin", 3_500_000})
+	mm.PutSecondaryKeys("Berlin", "postcode", "10115", "10117", "10119")
+	mm.Get("Berlin")                          // City{"Berlin", 3_500_000}
+	mm.GetBySecondaryKey("postcode", "10115") // City{"Berlin", 3_500_000}
 }
-mm := NewMultiKeyMap[string, City]()
-mm.Set("Berlin", City{"Berlin", 3_500_000})
-mm.SetSecondaryKeys("Berlin", "postcode", "10115", "10117", "10119")
-mm.Get("Berlin") // City{"Berlin", 3_500_000}
-mm.GetBySecondaryKey("postcode", "10115") // City{"Berlin", 3_500_000}
 ```
 
 # BiKeyMap
@@ -40,16 +46,22 @@ This map has two generic keys, both need to be unique.
 You can use it like this:
 
 ```go
-type City struct {
-    Name string
-    Population int
+package main
+
+import "github.com/aeimer/go-multikeymap/bikeymap"
+
+func main() {
+	type City struct {
+		Name       string
+		Population int
+	}
+	// keyA: Cityname, keyB: Population
+	bm := bikeymap.NewBiKeyMap[string, int, City]()
+	bm.Put("Berlin", 3_500_000, City{"Berlin", 3_500_000})
+	bm.Put("Hamburg", 1_800_000, City{"Hamburg", 1_800_000})
+	bm.GetByKeyA("Berlin")  // City{"Berlin", 3_500_000}
+	bm.GetByKeyB(1_800_000) // City{"Hamburg", 1_800_000}
 }
-// keyA: Cityname, keyB: Population
-bm := NewBiKeyMap[string, int, City]()
-bm.Set("Berlin", 3_500_000, City{"Berlin", 3_500_000})
-bm.Set("Hamburg", 1_800_000, City{"Hamburg", 1_800_000})
-b.GetByKeyA("Berlin") // City{"Berlin", 3_500_000}
-b.GetByKeyB(1_800_000) // City{"Hamburg", 1_800_000}
 ```
 
 ## Contribution
@@ -67,6 +79,9 @@ task tools
 
 # Run tests
 task go-test
+
+# Run benchmarks
+task go-test-bench
 ```
 
 ## Star history
