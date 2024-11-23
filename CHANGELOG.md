@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/aeimer/go-multikeymap/compare/v0.2.0...v0.3.0) (2024-11-23)
+
+
+### Features
+
+* adds benchmarks ([0098d28](https://github.com/aeimer/go-multikeymap/commit/0098d28992171bc5102c09b62c9bd66be347068b))
+* uses common function naming Put and Remove like GoDS ([1c67161](https://github.com/aeimer/go-multikeymap/commit/1c67161e543b97316d15c2b964e8583492bf74a1))
+
+
+### Code Refactoring
+
+* renames Add to Set ([b741f31](https://github.com/aeimer/go-multikeymap/commit/b741f31b9e2bfaa9eea5988498331b1867acad7c))
+
 ## [0.2.0](https://github.com/aeimer/go-multikeymap/compare/v0.1.0...v0.2.0) (2024-11-18)
 
 
