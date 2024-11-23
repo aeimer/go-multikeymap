@@ -37,3 +37,8 @@ tasks:
       - gotestsum -- -coverprofile=coverage.out ./...
       - go tool cover -func coverage.out
       - go tool cover -html coverage.out
+
+  go-test-bench:
+    desc: Run go benchmarks
+    aliases: [gotb]
+    cmd: gotestsum --format testname -- -run=NO_TEST -bench=. -benchmem -benchtime 1s ./...
