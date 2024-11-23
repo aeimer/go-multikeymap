@@ -24,8 +24,8 @@ func NewBiKeyMap[KeyA comparable, KeyB comparable, V any]() *BiKeyMap[KeyA, KeyB
 	}
 }
 
-// Set stores a value with two keys. It only fails if one of the keys is already set without the other.
-func (c *BiKeyMap[KeyA, KeyB, V]) Set(keyA KeyA, keyB KeyB, value V) error {
+// Put stores a value with two keys. It only fails if one of the keys is already set without the other.
+func (c *BiKeyMap[KeyA, KeyB, V]) Put(keyA KeyA, keyB KeyB, value V) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -37,7 +37,7 @@ func (c *BiKeyMap[KeyA, KeyB, V]) Set(keyA KeyA, keyB KeyB, value V) error {
 		return errors.New("keyA is already set with a different keyB")
 	}
 
-	// Set the new values for both keys.
+	// Put the new values for both keys.
 	c.dataByKeyA[keyA] = value
 	c.keyAByKeyB[keyB] = keyA
 	c.keyBByKeyA[keyA] = keyB
@@ -68,8 +68,8 @@ func (c *BiKeyMap[KeyA, KeyB, V]) GetByKeyB(keyB KeyB) (V, bool) {
 	return value, exists
 }
 
-// DeleteByKeyA removes a value using the first key, ensuring the corresponding second key is also deleted.
-func (c *BiKeyMap[KeyA, KeyB, V]) DeleteByKeyA(keyA KeyA) error {
+// RemoveByKeyA removes a value using the first key, ensuring the corresponding second key is also deleted.
+func (c *BiKeyMap[KeyA, KeyB, V]) RemoveByKeyA(keyA KeyA) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -79,7 +79,7 @@ func (c *BiKeyMap[KeyA, KeyB, V]) DeleteByKeyA(keyA KeyA) error {
 		return errors.New("keyA does not exist")
 	}
 
-	// Delete keyA, keyB, and the associated value.
+	// Remove keyA, keyB, and the associated value.
 	delete(c.dataByKeyA, keyA)
 	delete(c.keyAByKeyB, keyB)
 	delete(c.keyBByKeyA, keyA)
@@ -87,8 +87,8 @@ func (c *BiKeyMap[KeyA, KeyB, V]) DeleteByKeyA(keyA KeyA) error {
 	return nil
 }
 
-// DeleteByKeyB removes a value using the second key, ensuring the corresponding first key is also deleted.
-func (c *BiKeyMap[KeyA, KeyB, V]) DeleteByKeyB(keyB KeyB) error {
+// RemoveByKeyB removes a value using the second key, ensuring the corresponding first key is also deleted.
+func (c *BiKeyMap[KeyA, KeyB, V]) RemoveByKeyB(keyB KeyB) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -98,7 +98,7 @@ func (c *BiKeyMap[KeyA, KeyB, V]) DeleteByKeyB(keyB KeyB) error {
 		return errors.New("keyB does not exist")
 	}
 
-	// Delete keyA, keyB, and the associated value.
+	// Remove keyA, keyB, and the associated value.
 	delete(c.dataByKeyA, keyA)
 	delete(c.keyAByKeyB, keyB)
 	delete(c.keyBByKeyA, keyA)
