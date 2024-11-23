@@ -2,6 +2,7 @@ package bikeymap
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 	"testing"
 
@@ -243,4 +244,59 @@ func TestBiKeyMap_ConcurrentAccess(t *testing.T) {
 
 	// Wait for all goroutines to finish
 	wg.Wait()
+}
+
+// Benchmarks
+
+func benchmarkGet(b *testing.B, m *BiKeyMap[string, int, string], size int) {
+	for i := 0; i < b.N; i++ {
+		for n := 0; n < size; n++ {
+			m.GetByKeyA(strconv.Itoa(n))
+			m.GetByKeyB(n)
+		}
+	}
+}
+
+func BenchmarkBiKeyMapGet100(b *testing.B) {
+	b.StopTimer()
+	size := 100
+	m := NewBiKeyMap[string, int, string]()
+	for n := 0; n < size; n++ {
+		_ = m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
+	}
+	b.StartTimer()
+	benchmarkGet(b, m, size)
+}
+
+func BenchmarkBiKeyMapGet1000(b *testing.B) {
+	b.StopTimer()
+	size := 1000
+	m := NewBiKeyMap[string, int, string]()
+	for n := 0; n < size; n++ {
+		_ = m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
+	}
+	b.StartTimer()
+	benchmarkGet(b, m, size)
+}
+
+func BenchmarkBiKeyMapGet10000(b *testing.B) {
+	b.StopTimer()
+	size := 1000
+	m := NewBiKeyMap[string, int, string]()
+	for n := 0; n < size; n++ {
+		_ = m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
+	}
+	b.StartTimer()
+	benchmarkGet(b, m, size)
+}
+
+func BenchmarkBiKeyMapGet100000(b *testing.B) {
+	b.StopTimer()
+	size := 1000
+	m := NewBiKeyMap[string, int, string]()
+	for n := 0; n < size; n++ {
+		_ = m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
+	}
+	b.StartTimer()
+	benchmarkGet(b, m, size)
 }
