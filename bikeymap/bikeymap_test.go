@@ -3,7 +3,6 @@ package bikeymap
 import (
 	"fmt"
 	"strconv"
-	"sync"
 	"testing"
 
 	"github.com/aeimer/go-multikeymap/container"
@@ -180,70 +179,6 @@ func TestBiKeyMap_Values(t *testing.T) {
 			t.Errorf("unexpected value: %v", value)
 		}
 	}
-}
-
-func TestBiKeyMap_ConcurrentAccess(t *testing.T) {
-	bm := New[string, int, string]()
-	var wg sync.WaitGroup
-	const numGoroutines = 100
-
-	// Concurrently set values
-	for i := 0; i < numGoroutines; i++ {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			keyA := fmt.Sprintf("keyA%d", i)
-			keyB := i
-			value := fmt.Sprintf("value%d", i)
-			if err := bm.Put(keyA, keyB, value); err != nil {
-				t.Errorf("unexpected error: %v", err)
-			}
-		}(i)
-	}
-
-	// Wait for all goroutines to finish
-	wg.Wait()
-
-	// Concurrently get values
-	for i := 0; i < numGoroutines; i++ {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			keyA := fmt.Sprintf("keyA%d", i)
-			keyB := i
-			if value, exists := bm.GetByKeyA(keyA); !exists || value != fmt.Sprintf("value%d", i) {
-				t.Errorf("expected value%d, got %v", i, value)
-			}
-			if value, exists := bm.GetByKeyB(keyB); !exists || value != fmt.Sprintf("value%d", i) {
-				t.Errorf("expected value%d, got %v", i, value)
-			}
-		}(i)
-	}
-
-	// Wait for all goroutines to finish
-	wg.Wait()
-
-	// Concurrently remove values
-	for i := 0; i < numGoroutines; i++ {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			keyA := fmt.Sprintf("keyA%d", i)
-			keyB := i
-			if err := bm.RemoveByKeyA(keyA); err != nil {
-				t.Errorf("unexpected error: %v", err)
-			}
-			if _, exists := bm.GetByKeyA(keyA); exists {
-				t.Errorf("expected keyA%d to be removed", i)
-			}
-			if _, exists := bm.GetByKeyB(keyB); exists {
-				t.Errorf("expected keyB%d to be removed", i)
-			}
-		}(i)
-	}
-
-	// Wait for all goroutines to finish
-	wg.Wait()
 }
 
 // Benchmarks

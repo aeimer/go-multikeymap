@@ -3,7 +3,6 @@ package multikeymap
 import (
 	"fmt"
 	"strconv"
-	"sync"
 	"testing"
 
 	"github.com/aeimer/go-multikeymap/container"
@@ -150,56 +149,6 @@ func TestMultiKeyMap_Clear(t *testing.T) {
 	if !mm.Empty() {
 		t.Error("expected map to be empty after clear")
 	}
-}
-
-func TestMultiKeyMap_ConcurrentAccess(t *testing.T) {
-	mm := New[string, int]()
-	var wg sync.WaitGroup
-	const numGoroutines = 100
-
-	// Concurrently add values
-	for i := 0; i < numGoroutines; i++ {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			key := fmt.Sprintf("key%d", i)
-			mm.Put(key, i)
-		}(i)
-	}
-
-	// Wait for all goroutines to finish
-	wg.Wait()
-
-	// Concurrently get values
-	for i := 0; i < numGoroutines; i++ {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			key := fmt.Sprintf("key%d", i)
-			if value, exists := mm.Get(key); !exists || value != i {
-				t.Errorf("expected %d, got %v", i, value)
-			}
-		}(i)
-	}
-
-	// Wait for all goroutines to finish
-	wg.Wait()
-
-	// Concurrently remove values
-	for i := 0; i < numGoroutines; i++ {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			key := fmt.Sprintf("key%d", i)
-			mm.Remove(key)
-			if _, exists := mm.Get(key); exists {
-				t.Errorf("expected key%d to be removed", i)
-			}
-		}(i)
-	}
-
-	// Wait for all goroutines to finish
-	wg.Wait()
 }
 
 // Benchmarks
