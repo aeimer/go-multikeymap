@@ -44,37 +44,37 @@ func main() {
 Benchmark results (`task gotb`):
 
 ```
-# => Concurrent <=
-BenchmarkConcurrentMultiKeyMapGet100-12          	  785500	      1474 ns/op	       0 B/op	       0 allocs/op
-BenchmarkConcurrentMultiKeyMapGet1000-12         	   34244	     34785 ns/op	    2880 B/op	     900 allocs/op
-BenchmarkConcurrentMultiKeyMapGet10000-12        	    2864	    408021 ns/op	   38880 B/op	    9900 allocs/op
-BenchmarkConcurrentMultiKeyMapGet100000-12       	     260	   4617505 ns/op	  518883 B/op	   99900 allocs/op
-
-BenchmarkConcurrentMultiKeyMapPut100-12          	  478063	      2462 ns/op	       0 B/op	       0 allocs/op
-BenchmarkConcurrentMultiKeyMapPut1000-12         	   30484	     38430 ns/op	    2884 B/op	     900 allocs/op
-BenchmarkConcurrentMultiKeyMapPut10000-12        	    2683	    437981 ns/op	   39243 B/op	    9900 allocs/op
-BenchmarkConcurrentMultiKeyMapPut100000-12       	     247	   4853266 ns/op	  551621 B/op	   99916 allocs/op
-
-BenchmarkConcurrentMultiKeyMapRemove100-12       	  507627	      2330 ns/op	       0 B/op	       0 allocs/op
-BenchmarkConcurrentMultiKeyMapRemove1000-12      	   43503	     27669 ns/op	    2880 B/op	     900 allocs/op
-BenchmarkConcurrentMultiKeyMapRemove10000-12     	    4153	    279454 ns/op	   38880 B/op	    9900 allocs/op
-BenchmarkConcurrentMultiKeyMapRemove100000-12    	     435	   2789207 ns/op	  518896 B/op	   99900 allocs/op
-
 # => Non-Concurrent <=
-BenchmarkMultiKeyMapGet100-12                    	 1462314	       791.6 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMultiKeyMapGet1000-12                   	   38054	     31372 ns/op	    2880 B/op	     900 allocs/op
-BenchmarkMultiKeyMapGet10000-12                  	    3162	    371122 ns/op	   38880 B/op	    9900 allocs/op
-BenchmarkMultiKeyMapGet100000-12                 	     278	   4291932 ns/op	  518882 B/op	   99900 allocs/op
+BenchmarkMultiKeyMapGet/size_100-12                   	 1430344	       824.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMultiKeyMapGet/size_1000-12                  	   36643	     33912 ns/op	    2880 B/op	     900 allocs/op
+BenchmarkMultiKeyMapGet/size_10000-12                 	    3036	    390264 ns/op	   38880 B/op	    9900 allocs/op
+BenchmarkMultiKeyMapGet/size_100000-12                	     261	   4601110 ns/op	  518882 B/op	   99900 allocs/op
 
-BenchmarkMultiKeyMapPut100-12                    	  912810	      1324 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMultiKeyMapPut1000-12                   	   37822	     31526 ns/op	    2883 B/op	     900 allocs/op
-BenchmarkMultiKeyMapPut10000-12                  	    3148	    372532 ns/op	   39189 B/op	    9900 allocs/op
-BenchmarkMultiKeyMapPut100000-12                 	     285	   4176945 ns/op	  547220 B/op	   99913 allocs/op
+BenchmarkMultiKeyMapPut/size_100-12                   	  888855	      1412 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMultiKeyMapPut/size_1000-12                  	   36153	     33815 ns/op	    2883 B/op	     900 allocs/op
+BenchmarkMultiKeyMapPut/size_10000-12                 	    3026	    394762 ns/op	   39202 B/op	    9900 allocs/op
+BenchmarkMultiKeyMapPut/size_100000-12                	     248	   4571614 ns/op	  551453 B/op	   99915 allocs/op
 
-BenchmarkMultiKeyMapRemove100-12                 	 2957056	       404.7 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMultiKeyMapRemove1000-12                	   81163	     14679 ns/op	    2880 B/op	     900 allocs/op
-BenchmarkMultiKeyMapRemove10000-12               	    7063	    163110 ns/op	   38880 B/op	    9900 allocs/op
-BenchmarkMultiKeyMapRemove100000-12              	     702	   1674200 ns/op	  518892 B/op	   99900 allocs/op
+BenchmarkMultiKeyMapRemove/size_100-12                	 2821974	       425.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMultiKeyMapRemove/size_1000-12               	   78538	     15281 ns/op	    2880 B/op	     900 allocs/op
+BenchmarkMultiKeyMapRemove/size_10000-12              	    6922	    169382 ns/op	   38880 B/op	    9900 allocs/op
+BenchmarkMultiKeyMapRemove/size_100000-12             	     670	   1764847 ns/op	  518884 B/op	   99900 allocs/op
+
+# => Concurrent <=
+BenchmarkConcurrentMultiKeyMapGet/size_100-12         	  735793	      1578 ns/op	       0 B/op	       0 allocs/op
+BenchmarkConcurrentMultiKeyMapGet/size_1000-12        	   32385	     37066 ns/op	    2880 B/op	     900 allocs/op
+BenchmarkConcurrentMultiKeyMapGet/size_10000-12       	    2756	    433572 ns/op	   38880 B/op	    9900 allocs/op
+BenchmarkConcurrentMultiKeyMapGet/size_100000-12      	     240	   4950545 ns/op	  518883 B/op	   99900 allocs/op
+
+BenchmarkConcurrentMultiKeyMapPut/size_100-12         	  454376	      2609 ns/op	       0 B/op	       0 allocs/op
+BenchmarkConcurrentMultiKeyMapPut/size_1000-12        	   29721	     40303 ns/op	    2884 B/op	     900 allocs/op
+BenchmarkConcurrentMultiKeyMapPut/size_10000-12       	    2592	    459977 ns/op	   39256 B/op	    9900 allocs/op
+BenchmarkConcurrentMultiKeyMapPut/size_100000-12      	     224	   5369616 ns/op	  555038 B/op	   99918 allocs/op
+
+BenchmarkConcurrentMultiKeyMapRemove/size_100-12      	  490444	      2412 ns/op	       0 B/op	       0 allocs/op
+BenchmarkConcurrentMultiKeyMapRemove/size_1000-12     	   41236	     29073 ns/op	    2880 B/op	     900 allocs/op
+BenchmarkConcurrentMultiKeyMapRemove/size_10000-12    	    4030	    298559 ns/op	   38880 B/op	    9900 allocs/op
+BenchmarkConcurrentMultiKeyMapRemove/size_100000-12   	     400	   2968791 ns/op	  518884 B/op	   99900 allocs/op
 ```
 
 # BiKeyMap
@@ -105,37 +105,37 @@ func main() {
 Benchmark results (`task gotb`):
 
 ```
-# => Concurrent <=
-BenchmarkBiKeyMapGet100-12                    	  596592	      2038 ns/op	       0 B/op	       0 allocs/op
-BenchmarkBiKeyMapGet1000-12                   	   25460	     45825 ns/op	    2880 B/op	     900 allocs/op
-BenchmarkBiKeyMapGet10000-12                  	    1664	    692854 ns/op	   38880 B/op	    9900 allocs/op
-BenchmarkBiKeyMapGet100000-12                 	     148	   8296314 ns/op	  518881 B/op	   99900 allocs/op
-
-BenchmarkBiKeyMapPut100-12                    	  259808	      4586 ns/op	       0 B/op	       0 allocs/op
-BenchmarkBiKeyMapPut1000-12                   	   13803	     93115 ns/op	    5789 B/op	    1800 allocs/op
-BenchmarkBiKeyMapPut10000-12                  	     931	   1233748 ns/op	   81198 B/op	   19800 allocs/op
-BenchmarkBiKeyMapPut100000-12                 	      84	  16569381 ns/op	 1356669 B/op	  199940 allocs/op
-
-BenchmarkBiKeyMapRemove100-12                 	 6005941	       198.3 ns/op	       0 B/op	       0 allocs/op
-BenchmarkBiKeyMapRemove1000-12                	  626977	      1897 ns/op	       0 B/op	       0 allocs/op
-BenchmarkBiKeyMapRemove10000-12               	   63441	     18883 ns/op	       0 B/op	       0 allocs/op
-BenchmarkBiKeyMapRemove100000-12              	    6264	    190622 ns/op	       0 B/op	       0 allocs/op
-
 # => Non-Concurrent <=
-BenchmarkConcurrentBiKeyMapGet100-12          	  364874	      3497 ns/op	       0 B/op	       0 allocs/op
-BenchmarkConcurrentBiKeyMapGet1000-12         	   20120	     58907 ns/op	    2880 B/op	     900 allocs/op
-BenchmarkConcurrentBiKeyMapGet10000-12        	    1513	    786043 ns/op	   38880 B/op	    9900 allocs/op
-BenchmarkConcurrentBiKeyMapGet100000-12       	     133	   8940005 ns/op	  518881 B/op	   99900 allocs/op
+BenchmarkBiKeyMapGet/size_100-12        	  531668	      2094 ns/op	       0 B/op	       0 allocs/op
+BenchmarkBiKeyMapGet/size_1000-12       	   24627	     49464 ns/op	    2880 B/op	     900 allocs/op
+BenchmarkBiKeyMapGet/size_10000-12      	    1644	    729522 ns/op	   38880 B/op	    9900 allocs/op
+BenchmarkBiKeyMapGet/size_100000-12     	     139	   8544642 ns/op	  518882 B/op	   99900 allocs/op
 
-BenchmarkConcurrentBiKeyMapPut100-12          	  211080	      5466 ns/op	       0 B/op	       0 allocs/op
-BenchmarkConcurrentBiKeyMapPut1000-12         	   12590	     93671 ns/op	    5792 B/op	    1800 allocs/op
-BenchmarkConcurrentBiKeyMapPut10000-12        	     932	   1278751 ns/op	   81198 B/op	   19800 allocs/op
-BenchmarkConcurrentBiKeyMapPut100000-12       	      79	  14791849 ns/op	 1376440 B/op	  199947 allocs/op
+BenchmarkBiKeyMapPut/size_100-12        	  254956	      4653 ns/op	       0 B/op	       0 allocs/op
+BenchmarkBiKeyMapPut/size_1000-12       	   12880	     92922 ns/op	    5791 B/op	    1800 allocs/op
+BenchmarkBiKeyMapPut/size_10000-12      	     914	   1289536 ns/op	   81248 B/op	   19800 allocs/op
+BenchmarkBiKeyMapPut/size_100000-12     	      67	  17404694 ns/op	 1436872 B/op	  199973 allocs/op
 
-BenchmarkConcurrentBiKeyMapRemove100-12       	  359648	      3230 ns/op	    1600 B/op	      99 allocs/op
-BenchmarkConcurrentBiKeyMapRemove1000-12      	   36781	     32997 ns/op	   15999 B/op	     999 allocs/op
-BenchmarkConcurrentBiKeyMapRemove10000-12     	    3426	    334445 ns/op	  159953 B/op	    9997 allocs/op
-BenchmarkConcurrentBiKeyMapRemove100000-12    	     357	   3275911 ns/op	 1595519 B/op	   99719 allocs/op
+BenchmarkBiKeyMapRemove/size_100-12     	 5802380	       206.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkBiKeyMapRemove/size_1000-12    	  612367	      1984 ns/op	       0 B/op	       0 allocs/op
+BenchmarkBiKeyMapRemove/size_10000-12   	   60577	     19730 ns/op	       0 B/op	       0 allocs/op
+BenchmarkBiKeyMapRemove/size_100000-12  	    5990	    199194 ns/op	       0 B/op	       0 allocs/op
+
+# => Concurrent <=
+BenchmarkConcurrentBiKeyMapGet/size_100-12         	  325862	      3638 ns/op	       0 B/op	       0 allocs/op
+BenchmarkConcurrentBiKeyMapGet/size_1000-12        	   19471	     61879 ns/op	    2880 B/op	     900 allocs/op
+BenchmarkConcurrentBiKeyMapGet/size_10000-12       	    1428	    832351 ns/op	   38880 B/op	    9900 allocs/op
+BenchmarkConcurrentBiKeyMapGet/size_100000-12      	     100	  10026768 ns/op	  518882 B/op	   99900 allocs/op
+
+BenchmarkConcurrentBiKeyMapPut/size_100-12         	  207386	      5683 ns/op	       0 B/op	       0 allocs/op
+BenchmarkConcurrentBiKeyMapPut/size_1000-12        	   12157	     99885 ns/op	    5793 B/op	    1800 allocs/op
+BenchmarkConcurrentBiKeyMapPut/size_10000-12       	     870	   1371878 ns/op	   81438 B/op	   19800 allocs/op
+BenchmarkConcurrentBiKeyMapPut/size_100000-12      	      62	  19618138 ns/op	 1469608 B/op	  199989 allocs/op
+
+BenchmarkConcurrentBiKeyMapRemove/size_100-12      	  353018	      3667 ns/op	    1599 B/op	      99 allocs/op
+BenchmarkConcurrentBiKeyMapRemove/size_1000-12     	   34488	     34653 ns/op	   15999 B/op	     999 allocs/op
+BenchmarkConcurrentBiKeyMapRemove/size_10000-12    	    3363	    364001 ns/op	  159952 B/op	    9997 allocs/op
+BenchmarkConcurrentBiKeyMapRemove/size_100000-12   	     320	   3551128 ns/op	 1595034 B/op	   99687 allocs/op
 ```
 
 ## Contribution

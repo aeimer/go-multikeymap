@@ -153,98 +153,60 @@ func TestMultiKeyMap_Clear(t *testing.T) {
 
 // Benchmarks
 
-func benchmarkGet(b *testing.B, size int) {
-	m := New[string, int]()
-	for n := 0; n < size; n++ {
-		m.Put(strconv.Itoa(n), n)
+var benchmarkSizes = []struct {
+	size int
+}{
+	{size: 100},
+	{size: 1000},
+	{size: 10_000},
+	{size: 100_000},
+}
+
+func BenchmarkMultiKeyMapGet(b *testing.B) {
+	for _, v := range benchmarkSizes {
+		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
+			m := New[string, int]()
+			for n := 0; n < v.size; n++ {
+				m.Put(strconv.Itoa(n), n)
+			}
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				for n := 0; n < v.size; n++ {
+					m.Get(strconv.Itoa(n))
+				}
+			}
+		})
 	}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		for n := 0; n < size; n++ {
-			m.Get(strconv.Itoa(n))
-		}
+
+}
+
+func BenchmarkMultiKeyMapPut(b *testing.B) {
+	for _, v := range benchmarkSizes {
+		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
+			m := New[string, int]()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				for n := 0; n < v.size; n++ {
+					m.Put(strconv.Itoa(n), n)
+				}
+			}
+		})
 	}
 }
 
-func benchmarkPut(b *testing.B, size int) {
-	m := New[string, int]()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		for n := 0; n < size; n++ {
-			m.Put(strconv.Itoa(n), n)
-		}
+func BenchmarkMultiKeyMapRemove(b *testing.B) {
+	for _, v := range benchmarkSizes {
+		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
+			m := New[string, int]()
+			for n := 0; n < v.size; n++ {
+				m.Put(strconv.Itoa(n), n)
+			}
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				for n := 0; n < v.size; n++ {
+					m.Remove(strconv.Itoa(n))
+				}
+			}
+		})
 	}
-}
-
-func benchmarkRemove(b *testing.B, size int) {
-	m := New[string, int]()
-	for n := 0; n < size; n++ {
-		m.Put(strconv.Itoa(n), n)
-	}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		for n := 0; n < size; n++ {
-			m.Remove(strconv.Itoa(n))
-		}
-	}
-}
-
-func BenchmarkMultiKeyMapGet100(b *testing.B) {
-	size := 100
-	benchmarkGet(b, size)
-}
-
-func BenchmarkMultiKeyMapGet1000(b *testing.B) {
-	size := 1_000
-	benchmarkGet(b, size)
-}
-
-func BenchmarkMultiKeyMapGet10000(b *testing.B) {
-	size := 10_000
-	benchmarkGet(b, size)
-}
-
-func BenchmarkMultiKeyMapGet100000(b *testing.B) {
-	size := 100_000
-	benchmarkGet(b, size)
-}
-
-func BenchmarkMultiKeyMapPut100(b *testing.B) {
-	size := 100
-	benchmarkPut(b, size)
-}
-
-func BenchmarkMultiKeyMapPut1000(b *testing.B) {
-	size := 1_000
-	benchmarkPut(b, size)
-}
-
-func BenchmarkMultiKeyMapPut10000(b *testing.B) {
-	size := 10_000
-	benchmarkPut(b, size)
-}
-
-func BenchmarkMultiKeyMapPut100000(b *testing.B) {
-	size := 100_000
-	benchmarkPut(b, size)
-}
-
-func BenchmarkMultiKeyMapRemove100(b *testing.B) {
-	size := 100
-	benchmarkRemove(b, size)
-}
-
-func BenchmarkMultiKeyMapRemove1000(b *testing.B) {
-	size := 1_000
-	benchmarkRemove(b, size)
-}
-
-func BenchmarkMultiKeyMapRemove10000(b *testing.B) {
-	size := 10_000
-	benchmarkRemove(b, size)
-}
-
-func BenchmarkMultiKeyMapRemove100000(b *testing.B) {
-	size := 100_000
-	benchmarkRemove(b, size)
 }
