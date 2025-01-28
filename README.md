@@ -1,4 +1,4 @@
-# multikeymap
+# go-multikeymap
 
 See docs: https://pkg.go.dev/github.com/aeimer/go-multikeymap
 
@@ -77,7 +77,7 @@ BenchmarkConcurrentMultiKeyMapRemove/size_10000-12      4030     298559 ns/op   
 BenchmarkConcurrentMultiKeyMapRemove/size_100000-12      400    2968791 ns/op    518884 B/op    99900 allocs/op
 ```
 
-# BiKeyMap
+## BiKeyMap
 
 This map has two generic keys, both need to be unique.
 You can use it like this:
