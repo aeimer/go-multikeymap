@@ -2,32 +2,39 @@ package multikeymap
 
 import (
 	"fmt"
+	"sync"
 )
 
-// MultiKeyMap is a generic in-memory map with a primary key and multiple secondary keys.
-// It implements container/Container.
-type MultiKeyMap[K comparable, V any] struct {
-	primary     map[K]V
-	secondary   map[string]map[string]K // Group -> SecondaryKey -> PrimaryKey
-	secondaryTo map[K]map[string]string // PrimaryKey -> Group -> SecondaryKey
+// ConcurrentMultiKeyMap is the same as MultiKeyMap, but it is safe for concurrent use.
+// It uses a RWMutex to protect the map from concurrent reads and writes.
+// Therefore, it is slower than MultiKeyMap, but it is safe for concurrent use.
+type ConcurrentMultiKeyMap[K comparable, V any] struct {
+	mu sync.RWMutex
+	MultiKeyMap[K, V]
 }
 
-// New creates a new MultiKeyMap instance.
-func New[K comparable, V any]() *MultiKeyMap[K, V] {
-	return &MultiKeyMap[K, V]{
-		primary:     make(map[K]V),
-		secondary:   make(map[string]map[string]K),
-		secondaryTo: make(map[K]map[string]string),
+// NewConcurrent creates a new ConcurrentMultiKeyMap instance.
+func NewConcurrent[K comparable, V any]() *ConcurrentMultiKeyMap[K, V] {
+	return &ConcurrentMultiKeyMap[K, V]{
+		MultiKeyMap: MultiKeyMap[K, V]{
+			primary:     make(map[K]V),
+			secondary:   make(map[string]map[string]K),
+			secondaryTo: make(map[K]map[string]string),
+		},
 	}
 }
 
 // Put inserts a value with a primary key.
-func (m *MultiKeyMap[K, V]) Put(primaryKey K, value V) {
+func (m *ConcurrentMultiKeyMap[K, V]) Put(primaryKey K, value V) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.primary[primaryKey] = value
 }
 
 // PutSecondaryKeys adds secondary keys under a group for a primary key.
-func (m *MultiKeyMap[K, V]) PutSecondaryKeys(primaryKey K, group string, keys ...string) {
+func (m *ConcurrentMultiKeyMap[K, V]) PutSecondaryKeys(primaryKey K, group string, keys ...string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.secondary[group] == nil {
 		m.secondary[group] = make(map[string]K)
 	}
@@ -41,13 +48,17 @@ func (m *MultiKeyMap[K, V]) PutSecondaryKeys(primaryKey K, group string, keys ..
 }
 
 // HasPrimaryKey checks if a primary key exists.
-func (m *MultiKeyMap[K, V]) HasPrimaryKey(primaryKey K) bool {
+func (m *ConcurrentMultiKeyMap[K, V]) HasPrimaryKey(primaryKey K) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	_, exists := m.primary[primaryKey]
 	return exists
 }
 
 // HasSecondaryKey checks if a secondary key exists in a specific group.
-func (m *MultiKeyMap[K, V]) HasSecondaryKey(group string, key string) bool {
+func (m *ConcurrentMultiKeyMap[K, V]) HasSecondaryKey(group string, key string) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	if groupKeys, exists := m.secondary[group]; exists {
 		_, exists := groupKeys[key]
 		return exists
@@ -56,7 +67,9 @@ func (m *MultiKeyMap[K, V]) HasSecondaryKey(group string, key string) bool {
 }
 
 // GetAllKeyGroups returns all key groups and their secondary keys.
-func (m *MultiKeyMap[K, V]) GetAllKeyGroups() map[string]map[string]K {
+func (m *ConcurrentMultiKeyMap[K, V]) GetAllKeyGroups() map[string]map[string]K {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	// Create a copy of the key groups to avoid concurrency issues
 	result := make(map[string]map[string]K)
 	for group, keys := range m.secondary {
@@ -69,7 +82,9 @@ func (m *MultiKeyMap[K, V]) GetAllKeyGroups() map[string]map[string]K {
 }
 
 // Remove removes a primary key and its associated secondary keys.
-func (m *MultiKeyMap[K, V]) Remove(primaryKey K) {
+func (m *ConcurrentMultiKeyMap[K, V]) Remove(primaryKey K) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	delete(m.primary, primaryKey)
 	if groups, exists := m.secondaryTo[primaryKey]; exists {
 		for group, key := range groups {
@@ -83,13 +98,18 @@ func (m *MultiKeyMap[K, V]) Remove(primaryKey K) {
 }
 
 // Get returns a value by primary key.
-func (m *MultiKeyMap[K, V]) Get(primaryKey K) (V, bool) {
+func (m *ConcurrentMultiKeyMap[K, V]) Get(primaryKey K) (V, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	value, exists := m.primary[primaryKey]
 	return value, exists
 }
 
 // GetBySecondaryKey returns a primary key by secondary key and group.
-func (m *MultiKeyMap[K, V]) GetBySecondaryKey(group string, key string) (V, bool) {
+func (m *ConcurrentMultiKeyMap[K, V]) GetBySecondaryKey(group string, key string) (V, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	if groupKeys, exists := m.secondary[group]; exists {
 		primaryKey, exists := groupKeys[key]
 		if exists {
@@ -101,17 +121,23 @@ func (m *MultiKeyMap[K, V]) GetBySecondaryKey(group string, key string) (V, bool
 }
 
 // Size returns the number of primary keys in the map.
-func (m *MultiKeyMap[K, V]) Size() int {
+func (m *ConcurrentMultiKeyMap[K, V]) Size() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return len(m.primary)
 }
 
 // Empty checks if the map is empty.
-func (m *MultiKeyMap[K, V]) Empty() bool {
+func (m *ConcurrentMultiKeyMap[K, V]) Empty() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return len(m.primary) == 0
 }
 
 // Values returns a slice of all values in the map.
-func (m *MultiKeyMap[K, V]) Values() []V {
+func (m *ConcurrentMultiKeyMap[K, V]) Values() []V {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	values := make([]V, 0, len(m.primary))
 	for _, value := range m.primary {
 		values = append(values, value)
@@ -120,13 +146,17 @@ func (m *MultiKeyMap[K, V]) Values() []V {
 }
 
 // Clear removes all elements from the map.
-func (m *MultiKeyMap[K, V]) Clear() {
+func (m *ConcurrentMultiKeyMap[K, V]) Clear() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.primary = make(map[K]V)
 	m.secondary = make(map[string]map[string]K)
 	m.secondaryTo = make(map[K]map[string]string)
 }
 
 // String returns a string representation of the map.
-func (m *MultiKeyMap[K, V]) String() string {
-	return fmt.Sprintf("MultiKeyMap: %v", m.primary)
+func (m *ConcurrentMultiKeyMap[K, V]) String() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return fmt.Sprintf("ConcurrentMultiKeyMap: %v", m.primary)
 }

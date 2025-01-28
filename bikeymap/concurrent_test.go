@@ -3,13 +3,14 @@ package bikeymap
 import (
 	"fmt"
 	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/aeimer/go-multikeymap/container"
 )
 
-func ExampleNew() {
-	bm := New[string, int, string]()
+func ExampleNewConcurrent() {
+	bm := NewConcurrent[string, int, string]()
 	_ = bm.Put("keyA1", 1, "value1")
 	value, exists := bm.GetByKeyA("keyA1")
 	fmt.Printf("[Key A] value: %v, exists: %v\n", value, exists)
@@ -20,15 +21,15 @@ func ExampleNew() {
 	// [Key B] value: value1, exists: true
 }
 
-func TestBiKeyMap_ImplementsContainerInterface(t *testing.T) {
-	instance := New[int, int, int]()
+func TestConcurrentBiKeyMap_ImplementsContainerInterface(t *testing.T) {
+	instance := NewConcurrent[int, int, int]()
 	if _, ok := any(instance).(container.Container[int]); !ok {
-		t.Error("BiKeyMap does not implement the Container interface")
+		t.Error("ConcurrentBiKeyMap does not implement the Container interface")
 	}
 }
 
-func TestBiKeyMap_SetAndGet(t *testing.T) {
-	bm := New[string, int, string]()
+func TestConcurrentBiKeyMap_SetAndGet(t *testing.T) {
+	bm := NewConcurrent[string, int, string]()
 
 	err := bm.Put("keyA1", 1, "value1")
 	if err != nil {
@@ -46,8 +47,8 @@ func TestBiKeyMap_SetAndGet(t *testing.T) {
 	}
 }
 
-func TestBiKeyMap_SetDuplicateKeys(t *testing.T) {
-	bm := New[string, int, string]()
+func TestConcurrentBiKeyMap_SetDuplicateKeys(t *testing.T) {
+	bm := NewConcurrent[string, int, string]()
 
 	err := bm.Put("keyA1", 1, "value1")
 	if err != nil {
@@ -65,8 +66,8 @@ func TestBiKeyMap_SetDuplicateKeys(t *testing.T) {
 	}
 }
 
-func TestBiKeyMap_RemoveByKeyA(t *testing.T) {
-	bm := New[string, int, string]()
+func TestConcurrentBiKeyMap_RemoveByKeyA(t *testing.T) {
+	bm := NewConcurrent[string, int, string]()
 
 	_ = bm.Put("keyA1", 1, "value1")
 	err := bm.RemoveByKeyA("keyA1")
@@ -85,8 +86,8 @@ func TestBiKeyMap_RemoveByKeyA(t *testing.T) {
 	}
 }
 
-func TestBiKeyMap_RemoveByKeyB(t *testing.T) {
-	bm := New[string, int, string]()
+func TestConcurrentBiKeyMap_RemoveByKeyB(t *testing.T) {
+	bm := NewConcurrent[string, int, string]()
 
 	_ = bm.Put("keyA1", 1, "value1")
 	err := bm.RemoveByKeyB(1)
@@ -105,32 +106,32 @@ func TestBiKeyMap_RemoveByKeyB(t *testing.T) {
 	}
 }
 
-func TestBiKeyMap_String(t *testing.T) {
-	bm := New[string, int, string]()
+func TestConcurrentBiKeyMap_String(t *testing.T) {
+	bm := NewConcurrent[string, int, string]()
 	_ = bm.Put("keyA1", 1, "value1")
-	expected := "BiKeyMap: map[keyA1:value1]"
+	expected := "ConcurrentBiKeyMap: map[keyA1:value1]"
 	if bm.String() != expected {
 		t.Errorf("expected %s, got %s", expected, bm.String())
 	}
 }
 
-func TestBiKeyMap_RemoveByKeyA_NotFound(t *testing.T) {
-	bm := New[string, int, string]()
+func TestConcurrentBiKeyMap_RemoveByKeyA_NotFound(t *testing.T) {
+	bm := NewConcurrent[string, int, string]()
 	err := bm.RemoveByKeyA("nonExistentKey")
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
 }
 
-func TestBiKeyMap_RemoveByKeyB_NotFound(t *testing.T) {
-	bm := New[string, int, string]()
+func TestConcurrentBiKeyMap_RemoveByKeyB_NotFound(t *testing.T) {
+	bm := NewConcurrent[string, int, string]()
 	err := bm.RemoveByKeyB(999)
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
 }
-func TestBiKeyMap_EmptyAndSize(t *testing.T) {
-	bm := New[string, int, string]()
+func TestConcurrentBiKeyMap_EmptyAndSize(t *testing.T) {
+	bm := NewConcurrent[string, int, string]()
 
 	if !bm.Empty() {
 		t.Error("expected map to be empty")
@@ -146,8 +147,8 @@ func TestBiKeyMap_EmptyAndSize(t *testing.T) {
 	}
 }
 
-func TestBiKeyMap_Clear(t *testing.T) {
-	bm := New[string, int, string]()
+func TestConcurrentBiKeyMap_Clear(t *testing.T) {
+	bm := NewConcurrent[string, int, string]()
 
 	_ = bm.Put("keyA1", 1, "value1")
 	_ = bm.Put("keyA2", 2, "value2")
@@ -162,8 +163,8 @@ func TestBiKeyMap_Clear(t *testing.T) {
 	}
 }
 
-func TestBiKeyMap_Values(t *testing.T) {
-	bm := New[string, int, string]()
+func TestConcurrentBiKeyMap_Values(t *testing.T) {
+	bm := NewConcurrent[string, int, string]()
 
 	_ = bm.Put("keyA1", 1, "value1")
 	_ = bm.Put("keyA2", 2, "value2")
@@ -181,9 +182,73 @@ func TestBiKeyMap_Values(t *testing.T) {
 	}
 }
 
+func TestConcurrentBiKeyMap_ConcurrentAccess(t *testing.T) {
+	bm := NewConcurrent[string, int, string]()
+	var wg sync.WaitGroup
+	const numGoroutines = 100
+
+	// Concurrently set values
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			keyA := fmt.Sprintf("keyA%d", i)
+			keyB := i
+			value := fmt.Sprintf("value%d", i)
+			if err := bm.Put(keyA, keyB, value); err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		}(i)
+	}
+
+	// Wait for all goroutines to finish
+	wg.Wait()
+
+	// Concurrently get values
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			keyA := fmt.Sprintf("keyA%d", i)
+			keyB := i
+			if value, exists := bm.GetByKeyA(keyA); !exists || value != fmt.Sprintf("value%d", i) {
+				t.Errorf("expected value%d, got %v", i, value)
+			}
+			if value, exists := bm.GetByKeyB(keyB); !exists || value != fmt.Sprintf("value%d", i) {
+				t.Errorf("expected value%d, got %v", i, value)
+			}
+		}(i)
+	}
+
+	// Wait for all goroutines to finish
+	wg.Wait()
+
+	// Concurrently remove values
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			keyA := fmt.Sprintf("keyA%d", i)
+			keyB := i
+			if err := bm.RemoveByKeyA(keyA); err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+			if _, exists := bm.GetByKeyA(keyA); exists {
+				t.Errorf("expected keyA%d to be removed", i)
+			}
+			if _, exists := bm.GetByKeyB(keyB); exists {
+				t.Errorf("expected keyB%d to be removed", i)
+			}
+		}(i)
+	}
+
+	// Wait for all goroutines to finish
+	wg.Wait()
+}
+
 // Benchmarks
 
-var benchmarkSizes = []struct {
+var benchmarkConcurrentSizes = []struct {
 	size int
 }{
 	{size: 100},
@@ -192,10 +257,10 @@ var benchmarkSizes = []struct {
 	{size: 100_000},
 }
 
-func BenchmarkBiKeyMapGet(b *testing.B) {
-	for _, v := range benchmarkSizes {
+func BenchmarkConcurrentBiKeyMapGet(b *testing.B) {
+	for _, v := range benchmarkConcurrentSizes {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
-			m := New[string, int, string]()
+			m := NewConcurrent[string, int, string]()
 			for n := 0; n < v.size; n++ {
 				_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
 			}
@@ -210,10 +275,10 @@ func BenchmarkBiKeyMapGet(b *testing.B) {
 	}
 }
 
-func BenchmarkBiKeyMapPut(b *testing.B) {
-	for _, v := range benchmarkSizes {
+func BenchmarkConcurrentBiKeyMapPut(b *testing.B) {
+	for _, v := range benchmarkConcurrentSizes {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
-			m := New[string, int, string]()
+			m := NewConcurrent[string, int, string]()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				for n := 0; n < v.size; n++ {
@@ -225,10 +290,10 @@ func BenchmarkBiKeyMapPut(b *testing.B) {
 
 }
 
-func BenchmarkBiKeyMapRemove(b *testing.B) {
-	for _, v := range benchmarkSizes {
+func BenchmarkConcurrentBiKeyMapRemove(b *testing.B) {
+	for _, v := range benchmarkConcurrentSizes {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
-			m := New[string, int, string]()
+			m := NewConcurrent[string, int, string]()
 			for n := 0; n < v.size; n++ {
 				_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
 			}
