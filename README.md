@@ -5,7 +5,7 @@ See docs: https://pkg.go.dev/github.com/aeimer/go-multikeymap
 DISCLAIMER: Until version 1 is reached, the API may change.
 
 A go lib which handles maps with multiple keys.
-Both data-structures are available in go routine safe (concurrent) and non-concurrent version.
+Both data-structures are available in go routine safe (concurrent) and a non-concurrent version.
 
 * **MultiKeyMap** is a data structure based on go native maps.
 It has a primary key which directly maps to the values.
