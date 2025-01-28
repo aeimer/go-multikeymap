@@ -6,8 +6,9 @@ import (
 	"sync"
 )
 
-// ConcurrentBiKeyMap is a generic in-memory map with two independent keys for each value.
-// It implements container/Container.
+// ConcurrentBiKeyMap is the same as BiKeyMap, but it is safe for concurrent use.
+// It uses a RWMutex to protect the map from concurrent reads and writes.
+// Therefore, it is slower than BiKeyMap, but it is safe for concurrent use.
 type ConcurrentBiKeyMap[KeyA comparable, KeyB comparable, V any] struct {
 	mu sync.RWMutex
 	BiKeyMap[KeyA, KeyB, V]

@@ -5,8 +5,9 @@ import (
 	"sync"
 )
 
-// ConcurrentMultiKeyMap is a generic in-memory map with a primary key and multiple secondary keys.
-// It implements container/Container.
+// ConcurrentMultiKeyMap is the same as MultiKeyMap, but it is safe for concurrent use.
+// It uses a RWMutex to protect the map from concurrent reads and writes.
+// Therefore, it is slower than MultiKeyMap, but it is safe for concurrent use.
 type ConcurrentMultiKeyMap[K comparable, V any] struct {
 	mu sync.RWMutex
 	MultiKeyMap[K, V]
