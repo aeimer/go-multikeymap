@@ -158,48 +158,59 @@ func TestConcurrentMultiKeyMap_ConcurrentAccess(t *testing.T) {
 	const numGoroutines = 100
 
 	// Concurrently add values
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			key := fmt.Sprintf("key%d", i)
-			mm.Put(key, i)
-		}(i)
+		go concurrentAdd(t, i, &wg, mm)
 	}
 
 	// Wait for all goroutines to finish
 	wg.Wait()
 
 	// Concurrently get values
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			key := fmt.Sprintf("key%d", i)
-			if value, exists := mm.Get(key); !exists || value != i {
-				t.Errorf("expected %d, got %v", i, value)
-			}
-		}(i)
+		go concurrentGet(t, i, &wg, mm)
 	}
 
 	// Wait for all goroutines to finish
 	wg.Wait()
 
 	// Concurrently remove values
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
 		go func(i int) {
-			defer wg.Done()
-			key := fmt.Sprintf("key%d", i)
-			mm.Remove(key)
-			if _, exists := mm.Get(key); exists {
-				t.Errorf("expected key%d to be removed", i)
-			}
+			concurrentRemove(t, i, &wg, mm)
 		}(i)
 	}
 
 	// Wait for all goroutines to finish
 	wg.Wait()
+}
+
+func concurrentAdd(t *testing.T, i int, wg *sync.WaitGroup, mm *ConcurrentMultiKeyMap[string, int]) {
+	t.Helper()
+	defer wg.Done()
+	key := fmt.Sprintf("key%d", i)
+	mm.Put(key, i)
+}
+
+func concurrentGet(t *testing.T, i int, wg *sync.WaitGroup, mm *ConcurrentMultiKeyMap[string, int]) {
+	t.Helper()
+	defer wg.Done()
+	key := fmt.Sprintf("key%d", i)
+	if value, exists := mm.Get(key); !exists || value != i {
+		t.Errorf("expected %d, got %v", i, value)
+	}
+}
+
+func concurrentRemove(t *testing.T, i int, wg *sync.WaitGroup, mm *ConcurrentMultiKeyMap[string, int]) {
+	t.Helper()
+	defer wg.Done()
+	key := fmt.Sprintf("key%d", i)
+	mm.Remove(key)
+	if _, exists := mm.Get(key); exists {
+		t.Errorf("expected key%d to be removed", i)
+	}
 }
 
 // Benchmarks
@@ -217,12 +228,12 @@ func BenchmarkConcurrentMultiKeyMapGet(b *testing.B) {
 	for _, v := range benchmarkConcurrentSizes {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
 			m := NewConcurrent[string, int]()
-			for n := 0; n < v.size; n++ {
+			for n := range v.size {
 				m.Put(strconv.Itoa(n), n)
 			}
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				for n := 0; n < v.size; n++ {
+			for range b.N {
+				for n := range v.size {
 					m.Get(strconv.Itoa(n))
 				}
 			}
@@ -235,8 +246,8 @@ func BenchmarkConcurrentMultiKeyMapPut(b *testing.B) {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
 			m := NewConcurrent[string, int]()
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				for n := 0; n < v.size; n++ {
+			for range b.N {
+				for n := range v.size {
 					m.Put(strconv.Itoa(n), n)
 				}
 			}
@@ -248,12 +259,12 @@ func BenchmarkConcurrentMultiKeyMapRemove(b *testing.B) {
 	for _, v := range benchmarkConcurrentSizes {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
 			m := NewConcurrent[string, int]()
-			for n := 0; n < v.size; n++ {
+			for n := range v.size {
 				m.Put(strconv.Itoa(n), n)
 			}
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				for n := 0; n < v.size; n++ {
+			for range b.N {
+				for n := range v.size {
 					m.Remove(strconv.Itoa(n))
 				}
 			}

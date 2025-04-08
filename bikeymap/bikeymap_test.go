@@ -196,12 +196,12 @@ func BenchmarkBiKeyMapGet(b *testing.B) {
 	for _, v := range benchmarkSizes {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
 			m := New[string, int, string]()
-			for n := 0; n < v.size; n++ {
+			for n := range v.size {
 				_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
 			}
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				for n := 0; n < v.size; n++ {
+			for range b.N {
+				for n := range v.size {
 					m.GetByKeyA(strconv.Itoa(n))
 					m.GetByKeyB(n)
 				}
@@ -215,26 +215,25 @@ func BenchmarkBiKeyMapPut(b *testing.B) {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
 			m := New[string, int, string]()
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				for n := 0; n < v.size; n++ {
+			for range b.N {
+				for n := range v.size {
 					_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
 				}
 			}
 		})
 	}
-
 }
 
 func BenchmarkBiKeyMapRemove(b *testing.B) {
 	for _, v := range benchmarkSizes {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
 			m := New[string, int, string]()
-			for n := 0; n < v.size; n++ {
+			for n := range v.size {
 				_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
 			}
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				for n := 0; n < v.size; n++ {
+			for range b.N {
+				for n := range v.size {
 					_ = m.RemoveByKeyB(n)
 				}
 			}

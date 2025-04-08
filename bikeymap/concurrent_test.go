@@ -188,62 +188,71 @@ func TestConcurrentBiKeyMap_ConcurrentAccess(t *testing.T) {
 	const numGoroutines = 100
 
 	// Concurrently set values
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			keyA := fmt.Sprintf("keyA%d", i)
-			keyB := i
-			value := fmt.Sprintf("value%d", i)
-			if err := bm.Put(keyA, keyB, value); err != nil {
-				t.Errorf("unexpected error: %v", err)
-			}
-		}(i)
+		go concurrentSet(t, i, &wg, bm)
 	}
 
 	// Wait for all goroutines to finish
 	wg.Wait()
 
 	// Concurrently get values
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			keyA := fmt.Sprintf("keyA%d", i)
-			keyB := i
-			if value, exists := bm.GetByKeyA(keyA); !exists || value != fmt.Sprintf("value%d", i) {
-				t.Errorf("expected value%d, got %v", i, value)
-			}
-			if value, exists := bm.GetByKeyB(keyB); !exists || value != fmt.Sprintf("value%d", i) {
-				t.Errorf("expected value%d, got %v", i, value)
-			}
-		}(i)
+		go concurrentGet(t, i, &wg, bm)
 	}
 
 	// Wait for all goroutines to finish
 	wg.Wait()
 
 	// Concurrently remove values
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			keyA := fmt.Sprintf("keyA%d", i)
-			keyB := i
-			if err := bm.RemoveByKeyA(keyA); err != nil {
-				t.Errorf("unexpected error: %v", err)
-			}
-			if _, exists := bm.GetByKeyA(keyA); exists {
-				t.Errorf("expected keyA%d to be removed", i)
-			}
-			if _, exists := bm.GetByKeyB(keyB); exists {
-				t.Errorf("expected keyB%d to be removed", i)
-			}
-		}(i)
+		go concurrentRemove(t, i, &wg, bm)
 	}
 
 	// Wait for all goroutines to finish
 	wg.Wait()
+}
+
+func concurrentSet(t *testing.T, i int, wg *sync.WaitGroup, bm *ConcurrentBiKeyMap[string, int, string]) {
+	t.Helper()
+	defer wg.Done()
+	keyA := fmt.Sprintf("keyA%d", i)
+	keyB := i
+	value := fmt.Sprintf("value%d", i)
+	if err := bm.Put(keyA, keyB, value); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func concurrentGet(t *testing.T, i int, wg *sync.WaitGroup, bm *ConcurrentBiKeyMap[string, int, string]) {
+	t.Helper()
+	defer wg.Done()
+	keyA := fmt.Sprintf("keyA%d", i)
+	keyB := i
+	if value, exists := bm.GetByKeyA(keyA); !exists || value != fmt.Sprintf("value%d", i) {
+		t.Errorf("expected value%d, got %v", i, value)
+	}
+	if value, exists := bm.GetByKeyB(keyB); !exists || value != fmt.Sprintf("value%d", i) {
+		t.Errorf("expected value%d, got %v", i, value)
+	}
+}
+
+func concurrentRemove(t *testing.T, i int, wg *sync.WaitGroup, bm *ConcurrentBiKeyMap[string, int, string]) {
+	t.Helper()
+	defer wg.Done()
+	keyA := fmt.Sprintf("keyA%d", i)
+	keyB := i
+	if err := bm.RemoveByKeyA(keyA); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if _, exists := bm.GetByKeyA(keyA); exists {
+		t.Errorf("expected keyA%d to be removed", i)
+	}
+	if _, exists := bm.GetByKeyB(keyB); exists {
+		t.Errorf("expected keyB%d to be removed", i)
+	}
 }
 
 // Benchmarks
@@ -261,12 +270,12 @@ func BenchmarkConcurrentBiKeyMapGet(b *testing.B) {
 	for _, v := range benchmarkConcurrentSizes {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
 			m := NewConcurrent[string, int, string]()
-			for n := 0; n < v.size; n++ {
+			for n := range v.size {
 				_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
 			}
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				for n := 0; n < v.size; n++ {
+			for range b.N {
+				for n := range v.size {
 					m.GetByKeyA(strconv.Itoa(n))
 					m.GetByKeyB(n)
 				}
@@ -280,26 +289,25 @@ func BenchmarkConcurrentBiKeyMapPut(b *testing.B) {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
 			m := NewConcurrent[string, int, string]()
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				for n := 0; n < v.size; n++ {
+			for range b.N {
+				for n := range v.size {
 					_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
 				}
 			}
 		})
 	}
-
 }
 
 func BenchmarkConcurrentBiKeyMapRemove(b *testing.B) {
 	for _, v := range benchmarkConcurrentSizes {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
 			m := NewConcurrent[string, int, string]()
-			for n := 0; n < v.size; n++ {
+			for n := range v.size {
 				_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
 			}
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				for n := 0; n < v.size; n++ {
+			for range b.N {
+				for n := range v.size {
 					_ = m.RemoveByKeyB(n)
 				}
 			}
