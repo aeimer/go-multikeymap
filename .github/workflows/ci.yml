@@ -34,7 +34,7 @@ jobs:
           # Remove entries that should be ignore for coverage
           # => https://dev.to/talalyousif/excluding-files-from-code-coverage-in-go-291f
           mv coverage.out coverage.orig.out
-          grep -v -E -f .covignore coverage.orig.out > coverage.out
+          grep -v -E -f .gocovignore coverage.orig.out > coverage.out
           go tool cover -func coverage.out | tee coverage.txt
 
   golangci:
