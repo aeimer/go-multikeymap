@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/aeimer/go-multikeymap/container"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func ExampleNew() {
@@ -31,9 +33,7 @@ func TestBiKeyMap_SetAndGet(t *testing.T) {
 	bm := New[string, int, string]()
 
 	err := bm.Put("keyA1", 1, "value1")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
 	value, exists := bm.GetByKeyA("keyA1")
 	if !exists || value != "value1" {
@@ -50,29 +50,22 @@ func TestBiKeyMap_SetDuplicateKeys(t *testing.T) {
 	bm := New[string, int, string]()
 
 	err := bm.Put("keyA1", 1, "value1")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
 	err = bm.Put("keyA2", 1, "value2")
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
+	require.Error(t, err)
 
 	err = bm.Put("keyA1", 2, "value2")
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
+	require.Error(t, err)
 }
 
 func TestBiKeyMap_RemoveByKeyA(t *testing.T) {
 	bm := New[string, int, string]()
 
-	_ = bm.Put("keyA1", 1, "value1")
-	err := bm.RemoveByKeyA("keyA1")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	err := bm.Put("keyA1", 1, "value1")
+	require.NoError(t, err)
+	err = bm.RemoveByKeyA("keyA1")
+	require.NoError(t, err)
 
 	_, exists := bm.GetByKeyA("keyA1")
 	if exists {
@@ -88,11 +81,10 @@ func TestBiKeyMap_RemoveByKeyA(t *testing.T) {
 func TestBiKeyMap_RemoveByKeyB(t *testing.T) {
 	bm := New[string, int, string]()
 
-	_ = bm.Put("keyA1", 1, "value1")
-	err := bm.RemoveByKeyB(1)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	err := bm.Put("keyA1", 1, "value1")
+	require.NoError(t, err)
+	err = bm.RemoveByKeyB(1)
+	require.NoError(t, err)
 
 	_, exists := bm.GetByKeyA("keyA1")
 	if exists {
@@ -107,27 +99,23 @@ func TestBiKeyMap_RemoveByKeyB(t *testing.T) {
 
 func TestBiKeyMap_String(t *testing.T) {
 	bm := New[string, int, string]()
-	_ = bm.Put("keyA1", 1, "value1")
+	err := bm.Put("keyA1", 1, "value1")
+	require.NoError(t, err)
+
 	expected := "BiKeyMap: map[keyA1:value1]"
-	if bm.String() != expected {
-		t.Errorf("expected %s, got %s", expected, bm.String())
-	}
+	assert.Equal(t, expected, bm.String())
 }
 
 func TestBiKeyMap_RemoveByKeyA_NotFound(t *testing.T) {
 	bm := New[string, int, string]()
 	err := bm.RemoveByKeyA("nonExistentKey")
-	if err == nil {
-		t.Error("expected error, got nil")
-	}
+	require.Error(t, err)
 }
 
 func TestBiKeyMap_RemoveByKeyB_NotFound(t *testing.T) {
 	bm := New[string, int, string]()
 	err := bm.RemoveByKeyB(999)
-	if err == nil {
-		t.Error("expected error, got nil")
-	}
+	require.Error(t, err)
 }
 func TestBiKeyMap_EmptyAndSize(t *testing.T) {
 	bm := New[string, int, string]()
@@ -136,48 +124,45 @@ func TestBiKeyMap_EmptyAndSize(t *testing.T) {
 		t.Error("expected map to be empty")
 	}
 
-	_ = bm.Put("keyA1", 1, "value1")
+	err := bm.Put("keyA1", 1, "value1")
+	require.NoError(t, err)
 	if bm.Empty() {
 		t.Error("expected map to not be empty")
 	}
 
-	if bm.Size() != 1 {
-		t.Errorf("expected size 1, got %d", bm.Size())
-	}
+	assert.Equal(t, 1, bm.Size())
 }
 
 func TestBiKeyMap_Clear(t *testing.T) {
 	bm := New[string, int, string]()
 
-	_ = bm.Put("keyA1", 1, "value1")
-	_ = bm.Put("keyA2", 2, "value2")
+	err := bm.Put("keyA1", 1, "value1")
+	require.NoError(t, err)
+	err = bm.Put("keyA2", 2, "value2")
+	require.NoError(t, err)
 	bm.Clear()
 
 	if !bm.Empty() {
 		t.Error("expected map to be empty after clear")
 	}
 
-	if bm.Size() != 0 {
-		t.Errorf("expected size 0, got %d", bm.Size())
-	}
+	assert.Equal(t, 0, bm.Size())
 }
 
 func TestBiKeyMap_Values(t *testing.T) {
 	bm := New[string, int, string]()
 
-	_ = bm.Put("keyA1", 1, "value1")
-	_ = bm.Put("keyA2", 2, "value2")
+	err := bm.Put("keyA1", 1, "value1")
+	require.NoError(t, err)
+	err = bm.Put("keyA2", 2, "value2")
+	require.NoError(t, err)
 
 	values := bm.Values()
-	if len(values) != 2 {
-		t.Errorf("expected 2 values, got %d", len(values))
-	}
+	assert.Len(t, values, 2)
 
 	expectedValues := map[string]bool{"value1": true, "value2": true}
 	for _, value := range values {
-		if !expectedValues[value] {
-			t.Errorf("unexpected value: %v", value)
-		}
+		assert.Contains(t, expectedValues, value)
 	}
 }
 

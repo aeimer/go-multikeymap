@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/aeimer/go-multikeymap/container"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func ExampleNewConcurrent() {
@@ -32,9 +34,7 @@ func TestConcurrentBiKeyMap_SetAndGet(t *testing.T) {
 	bm := NewConcurrent[string, int, string]()
 
 	err := bm.Put("keyA1", 1, "value1")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
 	value, exists := bm.GetByKeyA("keyA1")
 	if !exists || value != "value1" {
@@ -51,29 +51,23 @@ func TestConcurrentBiKeyMap_SetDuplicateKeys(t *testing.T) {
 	bm := NewConcurrent[string, int, string]()
 
 	err := bm.Put("keyA1", 1, "value1")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
 	err = bm.Put("keyA2", 1, "value2")
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
+	require.Error(t, err)
 
 	err = bm.Put("keyA1", 2, "value2")
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
+	require.Error(t, err)
 }
 
 func TestConcurrentBiKeyMap_RemoveByKeyA(t *testing.T) {
 	bm := NewConcurrent[string, int, string]()
 
-	_ = bm.Put("keyA1", 1, "value1")
-	err := bm.RemoveByKeyA("keyA1")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	err := bm.Put("keyA1", 1, "value1")
+	require.NoError(t, err)
+
+	err = bm.RemoveByKeyA("keyA1")
+	require.NoError(t, err)
 
 	_, exists := bm.GetByKeyA("keyA1")
 	if exists {
@@ -89,11 +83,10 @@ func TestConcurrentBiKeyMap_RemoveByKeyA(t *testing.T) {
 func TestConcurrentBiKeyMap_RemoveByKeyB(t *testing.T) {
 	bm := NewConcurrent[string, int, string]()
 
-	_ = bm.Put("keyA1", 1, "value1")
-	err := bm.RemoveByKeyB(1)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	err := bm.Put("keyA1", 1, "value1")
+	require.NoError(t, err)
+	err = bm.RemoveByKeyB(1)
+	require.NoError(t, err)
 
 	_, exists := bm.GetByKeyA("keyA1")
 	if exists {
@@ -137,7 +130,8 @@ func TestConcurrentBiKeyMap_EmptyAndSize(t *testing.T) {
 		t.Error("expected map to be empty")
 	}
 
-	_ = bm.Put("keyA1", 1, "value1")
+	err := bm.Put("keyA1", 1, "value1")
+	require.NoError(t, err)
 	if bm.Empty() {
 		t.Error("expected map to not be empty")
 	}
@@ -150,8 +144,11 @@ func TestConcurrentBiKeyMap_EmptyAndSize(t *testing.T) {
 func TestConcurrentBiKeyMap_Clear(t *testing.T) {
 	bm := NewConcurrent[string, int, string]()
 
-	_ = bm.Put("keyA1", 1, "value1")
-	_ = bm.Put("keyA2", 2, "value2")
+	err := bm.Put("keyA1", 1, "value1")
+	require.NoError(t, err)
+	err = bm.Put("keyA2", 2, "value2")
+	require.NoError(t, err)
+
 	bm.Clear()
 
 	if !bm.Empty() {
@@ -166,19 +163,19 @@ func TestConcurrentBiKeyMap_Clear(t *testing.T) {
 func TestConcurrentBiKeyMap_Values(t *testing.T) {
 	bm := NewConcurrent[string, int, string]()
 
-	_ = bm.Put("keyA1", 1, "value1")
-	_ = bm.Put("keyA2", 2, "value2")
+	err := bm.Put("keyA1", 1, "value1")
+	require.NoError(t, err)
+	err = bm.Put("keyA2", 2, "value2")
+	require.NoError(t, err)
 
 	values := bm.Values()
-	if len(values) != 2 {
-		t.Errorf("expected 2 values, got %d", len(values))
-	}
+	assert.Len(t, values, 2)
 
+	// We get a list here, but as the map underneath has no order
+	// we need to check for contains and not equals list.
 	expectedValues := map[string]bool{"value1": true, "value2": true}
 	for _, value := range values {
-		if !expectedValues[value] {
-			t.Errorf("unexpected value: %v", value)
-		}
+		assert.Contains(t, expectedValues, value)
 	}
 }
 

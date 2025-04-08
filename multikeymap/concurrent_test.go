@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/aeimer/go-multikeymap/container"
+	"github.com/stretchr/testify/assert"
 )
 
 func ExampleNewConcurrent() {
@@ -135,11 +136,13 @@ func TestConcurrentMultiKeyMap_Values(t *testing.T) {
 	mm.Put("key1", 1)
 	mm.Put("key2", 2)
 	values := mm.Values()
-	expected := []int{1, 2}
-	for i, v := range values {
-		if v != expected[i] {
-			t.Errorf("expected value %d, got %d", expected[i], v)
-		}
+	assert.Len(t, values, 2)
+
+	// We get a list here, but as the map underneath has no order
+	// we need to check for contains and not equals list.
+	expectedValues := map[int]bool{1: true, 2: true}
+	for _, value := range values {
+		assert.Contains(t, expectedValues, value)
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/aeimer/go-multikeymap/container"
+	"github.com/stretchr/testify/assert"
 )
 
 func ExampleNew() {
@@ -103,19 +104,16 @@ func TestMultiKeyMap_GetBySecondaryKey_NotFound(t *testing.T) {
 func TestMultiKeyMap_String(t *testing.T) {
 	mm := New[string, int]()
 	mm.Put("key1", 1)
+
 	expected := "MultiKeyMap: map[key1:1]"
-	if mm.String() != expected {
-		t.Errorf("expected %s, got %s", expected, mm.String())
-	}
+	assert.Equal(t, expected, mm.String())
 }
 
 func TestMultiKeyMap_Size(t *testing.T) {
 	mm := New[string, int]()
 	mm.Put("key1", 1)
 	mm.Put("key2", 2)
-	if mm.Size() != 2 {
-		t.Errorf("expected size 2, got %d", mm.Size())
-	}
+	assert.Equal(t, 2, mm.Size())
 }
 
 func TestMultiKeyMap_Empty(t *testing.T) {
@@ -134,11 +132,13 @@ func TestMultiKeyMap_Values(t *testing.T) {
 	mm.Put("key1", 1)
 	mm.Put("key2", 2)
 	values := mm.Values()
-	expected := []int{1, 2}
-	for i, v := range values {
-		if v != expected[i] {
-			t.Errorf("expected value %d, got %d", expected[i], v)
-		}
+	assert.Len(t, values, 2)
+
+	// We get a list here, but as the map underneath has no order
+	// we need to check for contains and not equals list.
+	expectedValues := map[int]bool{1: true, 2: true}
+	for _, value := range values {
+		assert.Contains(t, expectedValues, value)
 	}
 }
 
