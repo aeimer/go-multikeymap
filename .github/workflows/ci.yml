@@ -49,8 +49,6 @@ jobs:
           go-version-file: go.mod
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v7
-        with:
-          version: v1.60
 
   tidy:
     name: go.mod is tidy
