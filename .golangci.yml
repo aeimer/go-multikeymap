@@ -1,0 +1,244 @@
+version: "2"
+linters:
+  default: none
+  enable:
+    ### default ###
+
+    # Errcheck is a program for checking for unchecked errors in go programs. These unchecked errors can be critical bugs in some cases.
+    # https://github.com/kisielk/errcheck
+    - errcheck
+    # Vet examines Go source code and reports suspicious constructs, such as Printf calls whose arguments do not align with the format string.
+    # https://pkg.go.dev/cmd/vet
+    - govet
+    # Detects when assignments to existing variables are not used.
+    # https://github.com/gordonklaus/ineffassign
+    - ineffassign
+    # Staticcheck is a state-of-the-art linter for the Go programming language. Using static analysis, it finds bugs and performance issues, offers simplifications, and enforces style rules.
+    # https://staticcheck.io/docs/
+    - staticcheck
+    # Checks Go code for unused constants, variables, functions and types.
+    - unused
+    ### additional ###
+
+    # check for pass []any as any in variadic func(...any).
+    # https://github.com/alingse/asasalint
+    - asasalint
+    # Simple linter to check that your code does not contain non-ASCII identifiers
+    # https://github.com/tdakkota/asciicheck
+    - asciicheck
+    # Checks for dangerous unicode character sequences
+    # https://github.com/breml/bidichk
+    - bidichk
+    # checks whether HTTP response body is closed successfully
+    # https://github.com/timakin/bodyclose
+    - bodyclose
+    # checks whether net/http.Header uses canonical header
+    # https://github.com/lasiar/canonicalheader
+    - canonicalheader
+    # containedctx is a linter that detects struct contained context.Context field
+    # https://github.com/sivchari/containedctx
+    - containedctx
+    # Copyloopvar is a linter detects places where loop variables are copied.
+    # https://golangci-lint.run/usage/linters/#copyloopvar
+    - copyloopvar
+    # check whether the function uses a non-inherited context
+    # https://github.com/kkHAIKE/contextcheck
+    - contextcheck
+    # checks function and package cyclomatic complexity
+    # https://github.com/bkielbasa/cyclop
+    - cyclop
+    # check declaration order and count of types, constants, variables and functions
+    # https://gitlab.com/bosi/decorder
+    - decorder
+    # Go linter that checks if package imports are in a list of acceptable packages
+    # https://github.com/OpenPeeDeeP/depguard
+    # DISABLED due to no imports
+    # - depguard
+    # Checks assignments with too many blank identifiers (e.g. x, , , _, := f())
+    # https://github.com/alexkohler/dogsled
+    - dogsled
+    # Tool for code clone detection
+    # https://github.com/mibk/dupl
+    - dupl
+    # checks for duplicate words in the source code
+    # https://github.com/Abirdcfly/dupword
+    - dupword
+    # check for two durations multiplied together
+    # https://github.com/charithe/durationcheck
+    - durationcheck
+    # Checks types passed to the json encoding functions. Reports unsupported types and optionally reports occasions, where the check for the returned error can be omitted.
+    # https://github.com/breml/errchkjson
+    - errchkjson
+    # Checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error.
+    # https://github.com/Antonboom/errname
+    - errname
+    # errorlint is a linter for that can be used to find code that will cause problems with the error wrapping scheme introduced in Go 1.13.
+    # https://github.com/polyfloyd/go-errorlint
+    - errorlint
+    # check exhaustiveness of enum switch statements
+    # https://github.com/nishanths/exhaustive
+    - exhaustive
+    # Detects nested contexts in loops
+    # https://github.com/Crocmagnon/fatcontext
+    - fatcontext
+    # Tool for detection of long functions
+    # https://github.com/ultraware/funlen
+    - funlen
+    # Checks that no init functions are present in Go code
+    # https://github.com/leighmcculloch/gochecknoinits
+    - gochecknoinits
+    # Checks that go compiler directive comments (//go:) are valid.
+    # https://github.com/leighmcculloch/gocheckcompilerdirectives
+    - gocheckcompilerdirectives
+    # Computes and checks the cognitive complexity of functions
+    # https://github.com/uudashr/gocognit
+    - gocognit
+    # Finds repeated strings that could be replaced by a constant
+    # https://github.com/jgautheron/goconst
+    - goconst
+    # Provides diagnostics that check for bugs, performance and style issues.
+    # https://github.com/go-critic/go-critic
+    - gocritic
+    # Computes and checks the cyclomatic complexity of functions
+    # https://github.com/fzipp/gocyclo
+    - gocyclo
+    # Check if comments end in a period
+    # https://github.com/tetafro/godot
+    #    - godot # WARNING: godot is broken and drops documentation https://github.com/tetafro/godot/issues/39 watched by Alex Krause
+    # Golang linter to check the errors handling expressions
+    # https://github.com/Djarvur/go-err113
+    # DISABLED due to too many false positives
+    # - err113
+    # Checks is file header matches to pattern
+    # https://github.com/denis-tingaikin/go-header
+    - goheader
+    # Manage the use of 'replace', 'retract', and 'excludes' directives in go.mod.
+    # https://github.com/ldez/gomoddirectives
+    - gomoddirectives
+    # Allow and block list linter for direct Go module dependencies. This is different from depguard where there are different block types for example version constraints and module recommendations.
+    # https://github.com/ryancurrah/gomodguard
+    - gomodguard
+    # Checks that printf-like functions are named with f at the end
+    # https://github.com/jirfag/go-printf-func-name
+    - goprintffuncname
+    # An analyzer to analyze expression groups.
+    # https://github.com/leonklingele/grouper
+    - grouper
+    # Enforces consistent import aliases
+    # https://github.com/julz/importas
+    - importas
+    # Reports interfaces with unnamed method parameters..
+    # https://github.com/macabu/inamedparam
+    - inamedparam
+    # A linter that checks the number of methods inside an interface.
+    # https://github.com/sashamelentyev/interfacebloat
+    - interfacebloat
+    # Intrange is a linter to find places where for loops could make use of an integer range.
+    # https://github.com/ckaznocha/intrange
+    - intrange
+    # Checks key valur pairs for common logger libraries (kitlog,klog,logr,zap).
+    # https://github.com/timonwong/loggercheck
+    - loggercheck
+    # Finds slice declarations with non-zero initial length.
+    # https://github.com/ashanbrown/makezero
+    - makezero
+    # Reports wrong mirror patterns of bytes/strings usage.
+    # https://github.com/butuzov/mirror
+    - mirror
+    # Finds commonly misspelled English words.
+    # https://github.com/client9/misspell
+    - misspell
+    # Enforce field tags in (un)marshaled structs.
+    # https://github.com/go-simpler/musttag
+    - musttag
+    # Checks that functions with naked returns are not longer than a maximum size (can be zero).
+    # https://github.com/alexkohler/nakedret
+    - nakedret
+    # noctx finds sending http request without context.Context
+    # https://github.com/sonatard/noctx
+    - noctx
+    # Reports ill-formed or insufficient nolint directives
+    # https://github.com/golangci/golangci-lint/blob/master/pkg/golinters/nolintlint/README.md
+    - nolintlint
+    # Find code that shadows one of Go's predeclared identifiers.
+    # https://github.com/nishanths/predeclared
+    - predeclared
+    # Checks for appropriate documentation in code
+    # https://github.com/qaware/qaway-linter
+    - reassign
+    # Check that struct tags are well aligned.
+    # https://github.com/4meepo/tagalign
+    - tagalign
+    # Linter checks if examples are testable (have an expected output).
+    # https://github.com/maratori/testableexamples
+    - testableexamples
+    # Checks usage of github.com/stretchr/testify.
+    # https://github.com/Antonboom/testifylint
+    - testifylint
+    # Thelper detects tests helpers which is not start with t.Helper() method.
+    # https://github.com/kulti/thelper
+    - thelper
+    # tparallel detects inappropriate usage of t.Parallel() method in your Go test codes
+    # https://github.com/moricho/tparallel
+    - tparallel
+    # Remove unnecessary type conversions
+    # https://github.com/mdempsky/unconvert
+    - unconvert
+    # A linter that detect the possibility to use variables/constants from the Go standard library.
+    # https://github.com/sashamelentyev/usestdlibvars
+    - usestdlibvars
+    # usetesting reports uses of functions with replacement inside the testing package.
+    # https://github.com/ldez/usetesting
+    - usetesting
+    # Finds wasted assignment statements.
+    # https://github.com/sanposhiho/wastedassign
+    - wastedassign
+    # Tool for detection of leading and trailing whitespace
+    # https://github.com/ultraware/whitespace
+    - whitespace
+    ### currently disabled, should be gradually used in the future ###
+
+    # - forcetypeassert
+    # - gosec
+    # - ireturn
+    # - mnd
+    # - nestif
+    # - nilerr
+    # - nilnil
+    # - prealloc
+    # - revive
+    # - unparam
+    # - varnamelen
+    # - wrapcheck
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - dupl
+          - err113
+          - funlen
+          - gochecknoinits
+          - goconst
+        path: _test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - gci
+    - gofmt
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
