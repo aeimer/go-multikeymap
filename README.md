@@ -149,13 +149,13 @@ Then you can run the following commands:
 task
 
 # Install dependencies
-task tools
+task setup
 
 # Run tests
-task go-test
+task test
 
 # Run benchmarks
-task go-test-bench
+task test-bench
 ```
 
 ## Star history

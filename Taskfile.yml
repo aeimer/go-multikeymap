@@ -5,7 +5,7 @@ version: '3'
 vars: {}
 
 tasks:
-  tools:
+  setup:
     desc: Install dependencies
     run: once
     deps: [brew]
@@ -20,25 +20,32 @@ tasks:
     status:
       - brew bundle check --verbose
 
-  go-test:
+  lint:
+    desc: Run linters
+    aliases: [l]
+    cmds:
+      - go mod tidy
+      - golangci-lint run --fix ./...
+
+  test:
     desc: Run go tests
-    aliases: [got]
+    aliases: [t]
     cmd: gotestsum
 
-  go-test-watch:
+  test-watch:
     desc: Run go tests with coverage and watch
-    aliases: [gotw]
+    aliases: [tw]
     cmd: gotestsum --watch -- -coverprofile=coverage.out ./...
 
-  go-test-coverage:
+  test-coverage:
     desc: Run go tests and display coverage
-    aliases: [gotc]
+    aliases: [tc]
     cmds:
       - gotestsum -- -coverprofile=coverage.out ./...
       - go tool cover -func coverage.out
       - go tool cover -html coverage.out
 
-  go-test-bench:
+  test-bench:
     desc: Run go benchmarks
-    aliases: [gotb]
+    aliases: [tb]
     cmd: go test -run=NO_TEST -bench=. -benchmem -benchtime=1s ./...
