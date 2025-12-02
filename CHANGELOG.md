@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.2](https://github.com/aeimer/go-multikeymap/compare/v0.4.1...v0.4.2) (2025-12-02)
+
+
+### Bug Fixes
+
+* **deps:** bump actions/checkout from 4 to 5 ([#13](https://github.com/aeimer/go-multikeymap/issues/13)) ([cd876bb](https://github.com/aeimer/go-multikeymap/commit/cd876bb6707488d16288dc3420f95a27f29de6d1))
+* **deps:** bump actions/checkout from 5 to 6 ([#15](https://github.com/aeimer/go-multikeymap/issues/15)) ([e83de7a](https://github.com/aeimer/go-multikeymap/commit/e83de7ab763d1825ff030cd8d86d16671faf7912))
+* **deps:** bump actions/setup-go from 5 to 6 ([#14](https://github.com/aeimer/go-multikeymap/issues/14)) ([ae265f8](https://github.com/aeimer/go-multikeymap/commit/ae265f81afe685cac297d04b1a0f5b4f92367773))
+* **deps:** bump github.com/stretchr/testify from 1.10.0 to 1.11.0 ([#10](https://github.com/aeimer/go-multikeymap/issues/10)) ([f980415](https://github.com/aeimer/go-multikeymap/commit/f980415912932b1b720a326f6056e6f8f851c0ec))
+* **deps:** bump github.com/stretchr/testify from 1.11.0 to 1.11.1 ([#12](https://github.com/aeimer/go-multikeymap/issues/12)) ([bff8d91](https://github.com/aeimer/go-multikeymap/commit/bff8d91a922cf9b2811be3cff2d943fabaa350c5))
+* **deps:** bump golangci/golangci-lint-action from 7 to 8 ([#9](https://github.com/aeimer/go-multikeymap/issues/9)) ([e955944](https://github.com/aeimer/go-multikeymap/commit/e955944da975a8547b2213ef9a0f9178bffc7db2))
+* **deps:** bump golangci/golangci-lint-action from 8 to 9 ([#16](https://github.com/aeimer/go-multikeymap/issues/16)) ([40c0eea](https://github.com/aeimer/go-multikeymap/commit/40c0eeaf77d76976f80f20dce05e0784dc6baeb3))
+
 ## [0.4.1](https://github.com/aeimer/go-multikeymap/compare/v0.4.0...v0.4.1) (2025-04-08)
 
 
