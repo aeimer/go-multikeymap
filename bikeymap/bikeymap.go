@@ -218,8 +218,13 @@ func (m *BiKeyMap[KeyA, KeyB, V]) Clone() *BiKeyMap[KeyA, KeyB, V] {
 }
 
 // Clear removes all elements from the map.
+// Like clear on a Go map, it keeps the allocated memory,
+// and an iteration that is running yields no further entries.
 func (m *BiKeyMap[KeyA, KeyB, V]) Clear() {
-	*m = BiKeyMap[KeyA, KeyB, V]{}
+	// clear instead of resetting the struct: a running range keeps the old
+	// maps and would go on yielding their entries.
+	clear(m.byKeyA)
+	clear(m.byKeyB)
 }
 
 // String returns a string representation of the map.

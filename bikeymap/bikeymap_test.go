@@ -565,3 +565,32 @@ func BenchmarkBiKeyMapDelete(b *testing.B) {
 		})
 	}
 }
+
+func TestBiKeyMap_Clear_DuringRange(t *testing.T) {
+	// given
+	bm := New[string, int, string]()
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	require.NoError(t, bm.Set("keyA3", 3, "value3"))
+
+	// when
+	yielded := 0
+	for range bm.All() {
+		yielded++
+		bm.Clear()
+	}
+
+	// then
+	assert.Equal(t, 1, yielded)
+	assert.Equal(t, 0, bm.Len())
+	_, ok := bm.KeyA(1)
+	assert.False(t, ok)
+
+	// when
+	require.NoError(t, bm.Set("keyA4", 1, "value4"))
+
+	// then
+	value, ok := bm.GetByKeyB(1)
+	assert.True(t, ok)
+	assert.Equal(t, "value4", value)
+}

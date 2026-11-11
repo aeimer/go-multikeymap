@@ -916,3 +916,52 @@ func BenchmarkMultiKeyMapDelete(b *testing.B) {
 		})
 	}
 }
+
+func TestMultiKeyMap_Clear_DuringSecondaryKeys(t *testing.T) {
+	// given
+	mm := New[int, string]()
+	mm.Set(1, "value1")
+	mm.AddSecondaryKeys(1, "group1", "secKey1", "secKey2", "secKey3")
+
+	// when
+	yielded := 0
+	for range mm.SecondaryKeys(1) {
+		yielded++
+		mm.Clear()
+	}
+
+	// then
+	assert.Equal(t, 1, yielded)
+	assert.Equal(t, 0, mm.Len())
+}
+
+func TestMultiKeyMap_Clear_DuringRange(t *testing.T) {
+	// given
+	mm := New[string, int]()
+	mm.Set("key1", 1)
+	mm.Set("key2", 2)
+	mm.Set("key3", 3)
+	assert.True(t, mm.AddSecondaryKeys("key1", "group1", "secKey1"))
+
+	// when
+	yielded := 0
+	for range mm.All() {
+		yielded++
+		mm.Clear()
+	}
+
+	// then
+	assert.Equal(t, 1, yielded)
+	assert.Equal(t, 0, mm.Len())
+	assert.False(t, mm.HasSecondaryKey("group1", "secKey1"))
+	assert.Empty(t, maps.Collect(mm.SecondaryKeys("key1")))
+
+	// when
+	mm.Set("key4", 4)
+
+	// then
+	assert.True(t, mm.AddSecondaryKeys("key4", "group1", "secKey1"))
+	value, ok := mm.GetBySecondaryKey("group1", "secKey1")
+	assert.True(t, ok)
+	assert.Equal(t, 4, value)
+}
