@@ -251,6 +251,32 @@ func concurrentDelete(t *testing.T, i int, wg *sync.WaitGroup, bm *ConcurrentBiK
 	}
 }
 
+func TestConcurrentBiKeyMap_ZeroValueReads(t *testing.T) {
+	var bm ConcurrentBiKeyMap[string, int, string]
+	_, ok := bm.GetByKeyA("keyA1")
+	assert.False(t, ok)
+	_, ok = bm.GetByKeyB(1)
+	assert.False(t, ok)
+	assert.Equal(t, 0, bm.Len())
+	assert.Empty(t, slices.Collect(bm.Values()))
+	assert.Equal(t, "ConcurrentBiKeyMap: map[]", bm.String())
+	bm.DeleteByKeyA("keyA1")
+	bm.DeleteByKeyB(1)
+	bm.Clear()
+	assert.Equal(t, 0, bm.Len())
+}
+
+func TestConcurrentBiKeyMap_ZeroValueWrites(t *testing.T) {
+	var bm ConcurrentBiKeyMap[string, int, string]
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	value, ok := bm.GetByKeyB(1)
+	assert.True(t, ok)
+	assert.Equal(t, "value1", value)
+	bm.Clear()
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	assert.Equal(t, 1, bm.Len())
+}
+
 // Benchmarks
 
 var benchmarkConcurrentSizes = []struct {

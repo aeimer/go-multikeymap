@@ -10,14 +10,17 @@ import (
 // ConcurrentMultiKeyMap is the same as MultiKeyMap, but it is safe for concurrent use.
 // It uses a RWMutex to protect the map from concurrent reads and writes.
 // Therefore, it is slower than MultiKeyMap, but it is safe for concurrent use.
+// The zero value is an empty map ready to use.
+// A ConcurrentMultiKeyMap must not be copied after first use.
 type ConcurrentMultiKeyMap[K comparable, V any] struct {
 	mu sync.RWMutex
 	m  MultiKeyMap[K, V]
 }
 
-// NewConcurrent creates a new ConcurrentMultiKeyMap instance.
+// NewConcurrent returns a new empty ConcurrentMultiKeyMap.
+// It is equivalent to new(ConcurrentMultiKeyMap[K, V]).
 func NewConcurrent[K comparable, V any]() *ConcurrentMultiKeyMap[K, V] {
-	return &ConcurrentMultiKeyMap[K, V]{m: *New[K, V]()}
+	return new(ConcurrentMultiKeyMap[K, V])
 }
 
 // Set stores value under primaryKey.

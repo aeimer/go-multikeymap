@@ -153,6 +153,32 @@ func TestBiKeyMap_Values(t *testing.T) {
 	assert.ElementsMatch(t, []string{"value1", "value2"}, slices.Collect(bm.Values()))
 }
 
+func TestBiKeyMap_ZeroValueReads(t *testing.T) {
+	var bm BiKeyMap[string, int, string]
+	_, ok := bm.GetByKeyA("keyA1")
+	assert.False(t, ok)
+	_, ok = bm.GetByKeyB(1)
+	assert.False(t, ok)
+	assert.Equal(t, 0, bm.Len())
+	assert.Empty(t, slices.Collect(bm.Values()))
+	assert.Equal(t, "BiKeyMap: map[]", bm.String())
+	bm.DeleteByKeyA("keyA1")
+	bm.DeleteByKeyB(1)
+	bm.Clear()
+	assert.Equal(t, 0, bm.Len())
+}
+
+func TestBiKeyMap_ZeroValueWrites(t *testing.T) {
+	var bm BiKeyMap[string, int, string]
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	value, ok := bm.GetByKeyB(1)
+	assert.True(t, ok)
+	assert.Equal(t, "value1", value)
+	bm.Clear()
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	assert.Equal(t, 1, bm.Len())
+}
+
 // Benchmarks
 
 var benchmarkSizes = []struct {
