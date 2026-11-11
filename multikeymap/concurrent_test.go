@@ -6,7 +6,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aeimer/go-multikeymap/container"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,13 +22,6 @@ func ExampleNewConcurrent() {
 	// Output:
 	// [Key A1] value: 1, exists: true
 	// [Secondary group1 key2] value: 1, exists: true
-}
-
-func TestConcurrentMultiKeyMap_ImplementsContainerInterface(t *testing.T) {
-	instance := NewConcurrent[int, int]()
-	if _, ok := any(instance).(container.Container[int]); !ok {
-		t.Error("MultiKeyMap does not implement the Container interface")
-	}
 }
 
 func TestConcurrentMultiKeyMap_SetAndGet(t *testing.T) {

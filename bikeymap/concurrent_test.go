@@ -6,7 +6,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aeimer/go-multikeymap/container"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,13 +20,6 @@ func ExampleNewConcurrent() {
 	// Output:
 	// [Key A] value: value1, exists: true
 	// [Key B] value: value1, exists: true
-}
-
-func TestConcurrentBiKeyMap_ImplementsContainerInterface(t *testing.T) {
-	instance := NewConcurrent[int, int, int]()
-	if _, ok := any(instance).(container.Container[int]); !ok {
-		t.Error("ConcurrentBiKeyMap does not implement the Container interface")
-	}
 }
 
 func TestConcurrentBiKeyMap_SetAndGet(t *testing.T) {

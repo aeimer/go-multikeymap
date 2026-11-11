@@ -6,7 +6,6 @@ import (
 
 // MultiKeyMap is a generic in-memory map with a primary key and multiple secondary keys.
 // Secondary keys are strings, organised in named groups.
-// It implements container/Container.
 // A MultiKeyMap is not safe for concurrent use; use ConcurrentMultiKeyMap instead.
 type MultiKeyMap[K comparable, V any] struct {
 	primary     map[K]V

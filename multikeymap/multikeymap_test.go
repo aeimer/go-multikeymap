@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/aeimer/go-multikeymap/container"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,13 +21,6 @@ func ExampleNew() {
 	// Output:
 	// [Key A1] value: 1, exists: true
 	// [Secondary group1 key2] value: 1, exists: true
-}
-
-func TestMultiKeyMap_ImplementsContainerInterface(t *testing.T) {
-	instance := New[int, int]()
-	if _, ok := any(instance).(container.Container[int]); !ok {
-		t.Error("MultiKeyMap does not implement the Container interface")
-	}
 }
 
 func TestMultiKeyMap_SetAndGet(t *testing.T) {
