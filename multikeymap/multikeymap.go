@@ -27,9 +27,12 @@ func (m *MultiKeyMap[K, V]) Put(primaryKey K, value V) {
 }
 
 // PutSecondaryKeys adds secondary keys under a group for a primary key.
-func (m *MultiKeyMap[K, V]) PutSecondaryKeys(primaryKey K, group string, keys ...string) {
+func (m *MultiKeyMap[K, V]) PutSecondaryKeys(primaryKey K, group string, keys ...string) bool {
+	if _, exists := m.primary[primaryKey]; !exists {
+		return false
+	}
 	if len(keys) == 0 {
-		return
+		return true
 	}
 	if m.secondary[group] == nil {
 		m.secondary[group] = make(map[string]K)
@@ -49,6 +52,7 @@ func (m *MultiKeyMap[K, V]) PutSecondaryKeys(primaryKey K, group string, keys ..
 		m.secondary[group][key] = primaryKey
 		groups[group][key] = struct{}{}
 	}
+	return true
 }
 
 // removeReverseEntry drops key from the reverse index of primaryKey
