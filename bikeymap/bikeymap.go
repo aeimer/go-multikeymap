@@ -16,9 +16,14 @@ var ErrKeyBConflict = errors.New("bikeymap: keyB is paired with a different keyA
 // The zero value is an empty map ready to use.
 // A BiKeyMap is not safe for concurrent use; use ConcurrentBiKeyMap instead.
 type BiKeyMap[KeyA comparable, KeyB comparable, V any] struct {
-	dataByKeyA map[KeyA]V
-	keyAByKeyB map[KeyB]KeyA
-	keyBByKeyA map[KeyA]KeyB
+	byKeyA map[KeyA]entry[KeyB, V]
+	byKeyB map[KeyB]KeyA
+}
+
+// entry holds the value of a keyA together with its paired keyB.
+type entry[KeyB comparable, V any] struct {
+	keyB  KeyB
+	value V
 }
 
 // New returns a new empty BiKeyMap.
@@ -34,92 +39,88 @@ func New[KeyA comparable, KeyB comparable, V any]() *BiKeyMap[KeyA, KeyB, V] {
 // If both keys are already paired with each other, Set replaces the value.
 func (m *BiKeyMap[KeyA, KeyB, V]) Set(keyA KeyA, keyB KeyB, value V) error {
 	// Check if one key is set without the other, or if they do not point to each other.
-	if existingKeyA, keyBExists := m.keyAByKeyB[keyB]; keyBExists && existingKeyA != keyA {
+	if existingKeyA, keyBExists := m.byKeyB[keyB]; keyBExists && existingKeyA != keyA {
 		return ErrKeyBConflict
 	}
-	if existingKeyB, keyAExists := m.keyBByKeyA[keyA]; keyAExists && existingKeyB != keyB {
+	if e, keyAExists := m.byKeyA[keyA]; keyAExists && e.keyB != keyB {
 		return ErrKeyAConflict
 	}
 
 	// Store the value and pair both keys.
-	if m.dataByKeyA == nil {
-		m.dataByKeyA = make(map[KeyA]V)
-		m.keyAByKeyB = make(map[KeyB]KeyA)
-		m.keyBByKeyA = make(map[KeyA]KeyB)
+	if m.byKeyA == nil {
+		m.byKeyA = make(map[KeyA]entry[KeyB, V])
+		m.byKeyB = make(map[KeyB]KeyA)
 	}
-	m.dataByKeyA[keyA] = value
-	m.keyAByKeyB[keyB] = keyA
-	m.keyBByKeyA[keyA] = keyB
+	m.byKeyA[keyA] = entry[KeyB, V]{keyB: keyB, value: value}
+	m.byKeyB[keyB] = keyA
 	return nil
 }
 
 // GetByKeyA retrieves a value using the first key.
 func (m *BiKeyMap[KeyA, KeyB, V]) GetByKeyA(keyA KeyA) (V, bool) {
-	value, exists := m.dataByKeyA[keyA]
-	return value, exists
+	e, exists := m.byKeyA[keyA]
+	return e.value, exists
 }
 
 // GetByKeyB retrieves a value using the second key.
 func (m *BiKeyMap[KeyA, KeyB, V]) GetByKeyB(keyB KeyB) (V, bool) {
-	keyA, exists := m.keyAByKeyB[keyB]
+	keyA, exists := m.byKeyB[keyB]
 	if !exists {
 		var zero V
 		return zero, false
 	}
 
-	value, exists := m.dataByKeyA[keyA]
-	return value, exists
+	e, exists := m.byKeyA[keyA]
+	return e.value, exists
 }
 
 // KeyA returns the keyA paired with keyB.
 // The bool reports whether keyB exists.
 func (m *BiKeyMap[KeyA, KeyB, V]) KeyA(keyB KeyB) (KeyA, bool) {
-	keyA, exists := m.keyAByKeyB[keyB]
+	keyA, exists := m.byKeyB[keyB]
 	return keyA, exists
 }
 
 // KeyB returns the keyB paired with keyA.
 // The bool reports whether keyA exists.
 func (m *BiKeyMap[KeyA, KeyB, V]) KeyB(keyA KeyA) (KeyB, bool) {
-	keyB, exists := m.keyBByKeyA[keyA]
-	return keyB, exists
+	e, exists := m.byKeyA[keyA]
+	return e.keyB, exists
 }
 
 // DeleteByKeyA removes the value stored under keyA and the paired keyB.
 // If keyA does not exist, DeleteByKeyA is a no-op.
 func (m *BiKeyMap[KeyA, KeyB, V]) DeleteByKeyA(keyA KeyA) {
-	keyB, ok := m.keyBByKeyA[keyA]
+	e, ok := m.byKeyA[keyA]
 	if !ok {
 		return
 	}
-	delete(m.dataByKeyA, keyA)
-	delete(m.keyAByKeyB, keyB)
-	delete(m.keyBByKeyA, keyA)
+	delete(m.byKeyA, keyA)
+	delete(m.byKeyB, e.keyB)
 }
 
 // DeleteByKeyB removes the value stored under keyB and the paired keyA.
 // If keyB does not exist, DeleteByKeyB is a no-op.
 func (m *BiKeyMap[KeyA, KeyB, V]) DeleteByKeyB(keyB KeyB) {
-	keyA, ok := m.keyAByKeyB[keyB]
+	keyA, ok := m.byKeyB[keyB]
 	if !ok {
 		return
 	}
-	delete(m.dataByKeyA, keyA)
-	delete(m.keyAByKeyB, keyB)
-	delete(m.keyBByKeyA, keyA)
+	delete(m.byKeyA, keyA)
+	delete(m.byKeyB, keyB)
 }
 
 // Len returns the number of values in the map.
 func (m *BiKeyMap[KeyA, KeyB, V]) Len() int {
-	return len(m.dataByKeyA)
+	return len(m.byKeyA)
 }
 
 // All returns an iterator over all keyA keys and their values.
 // The iteration order is unspecified, like for a Go map.
 func (m *BiKeyMap[KeyA, KeyB, V]) All() iter.Seq2[KeyA, V] {
 	return func(yield func(KeyA, V) bool) {
-		for keyA, v := range m.dataByKeyA {
-			if !yield(keyA, v) {
+		for keyA, e := range m.byKeyA {
+			if !yield(keyA, e.value) {
 				return
 			}
 		}
@@ -130,7 +131,7 @@ func (m *BiKeyMap[KeyA, KeyB, V]) All() iter.Seq2[KeyA, V] {
 // The iteration order is unspecified, like for a Go map.
 func (m *BiKeyMap[KeyA, KeyB, V]) KeysA() iter.Seq[KeyA] {
 	return func(yield func(KeyA) bool) {
-		for keyA := range m.dataByKeyA {
+		for keyA := range m.byKeyA {
 			if !yield(keyA) {
 				return
 			}
@@ -142,7 +143,7 @@ func (m *BiKeyMap[KeyA, KeyB, V]) KeysA() iter.Seq[KeyA] {
 // The iteration order is unspecified, like for a Go map.
 func (m *BiKeyMap[KeyA, KeyB, V]) KeysB() iter.Seq[KeyB] {
 	return func(yield func(KeyB) bool) {
-		for keyB := range m.keyAByKeyB {
+		for keyB := range m.byKeyB {
 			if !yield(keyB) {
 				return
 			}
@@ -154,8 +155,8 @@ func (m *BiKeyMap[KeyA, KeyB, V]) KeysB() iter.Seq[KeyB] {
 // The iteration order is unspecified, like for a Go map.
 func (m *BiKeyMap[KeyA, KeyB, V]) Values() iter.Seq[V] {
 	return func(yield func(V) bool) {
-		for _, v := range m.dataByKeyA {
-			if !yield(v) {
+		for _, e := range m.byKeyA {
+			if !yield(e.value) {
 				return
 			}
 		}
@@ -169,5 +170,14 @@ func (m *BiKeyMap[KeyA, KeyB, V]) Clear() {
 
 // String returns a string representation of the map.
 func (m *BiKeyMap[KeyA, KeyB, V]) String() string {
-	return fmt.Sprintf("BiKeyMap: %v", m.dataByKeyA)
+	return "BiKeyMap: " + m.format()
+}
+
+// format formats keyA and values like a map[KeyA]V.
+func (m *BiKeyMap[KeyA, KeyB, V]) format() string {
+	values := make(map[KeyA]V, len(m.byKeyA))
+	for keyA, e := range m.byKeyA {
+		values[keyA] = e.value
+	}
+	return fmt.Sprint(values)
 }
