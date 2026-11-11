@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/aeimer/go-multikeymap/container"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,13 +19,6 @@ func ExampleNew() {
 	// Output:
 	// [Key A] value: value1, exists: true
 	// [Key B] value: value1, exists: true
-}
-
-func TestBiKeyMap_ImplementsContainerInterface(t *testing.T) {
-	instance := New[int, int, int]()
-	if _, ok := any(instance).(container.Container[int]); !ok {
-		t.Error("BiKeyMap does not implement the Container interface")
-	}
 }
 
 func TestBiKeyMap_SetAndGet(t *testing.T) {

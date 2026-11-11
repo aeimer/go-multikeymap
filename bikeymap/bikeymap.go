@@ -6,7 +6,6 @@ import (
 )
 
 // BiKeyMap is a generic in-memory map with two independent keys for each value.
-// It implements container/Container.
 // A BiKeyMap is not safe for concurrent use; use ConcurrentBiKeyMap instead.
 type BiKeyMap[KeyA comparable, KeyB comparable, V any] struct {
 	dataByKeyA map[KeyA]V
