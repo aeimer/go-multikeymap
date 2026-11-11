@@ -2,6 +2,8 @@ package bikeymap
 
 import (
 	"fmt"
+	"iter"
+	"slices"
 	"sync"
 )
 
@@ -18,13 +20,13 @@ func NewConcurrent[KeyA comparable, KeyB comparable, V any]() *ConcurrentBiKeyMa
 	return &ConcurrentBiKeyMap[KeyA, KeyB, V]{m: *New[KeyA, KeyB, V]()}
 }
 
-// Put stores a value with two keys.
+// Set stores value under keyA and keyB and pairs the two keys.
 // It returns an error and changes nothing if keyA or keyB is already paired with a different key.
-// If both keys are already paired with each other, Put replaces the value.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Put(keyA KeyA, keyB KeyB, value V) error {
+// If both keys are already paired with each other, Set replaces the value.
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Set(keyA KeyA, keyB KeyB, value V) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.m.Put(keyA, keyB, value)
+	return c.m.Set(keyA, keyB, value)
 }
 
 // GetByKeyA retrieves a value using the first key.
@@ -41,41 +43,44 @@ func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) GetByKeyB(keyB KeyB) (V, bool) {
 	return c.m.GetByKeyB(keyB)
 }
 
-// RemoveByKeyA removes a value using the first key, ensuring the corresponding second key is also deleted.
-// It returns an error if keyA does not exist.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) RemoveByKeyA(keyA KeyA) error {
+// DeleteByKeyA removes the value stored under keyA and the paired keyB.
+// If keyA does not exist, DeleteByKeyA is a no-op.
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) DeleteByKeyA(keyA KeyA) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.m.RemoveByKeyA(keyA)
+	c.m.DeleteByKeyA(keyA)
 }
 
-// RemoveByKeyB removes a value using the second key, ensuring the corresponding first key is also deleted.
-// It returns an error if keyB does not exist.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) RemoveByKeyB(keyB KeyB) error {
+// DeleteByKeyB removes the value stored under keyB and the paired keyA.
+// If keyB does not exist, DeleteByKeyB is a no-op.
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) DeleteByKeyB(keyB KeyB) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.m.RemoveByKeyB(keyB)
+	c.m.DeleteByKeyB(keyB)
 }
 
-// Empty checks if the map is empty.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Empty() bool {
+// Len returns the number of values in the map.
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Len() int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.m.Empty()
+	return c.m.Len()
 }
 
-// Size returns the number of elements in the map.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Size() int {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.m.Size()
-}
-
-// Values returns a slice of all values in the map.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Values() []V {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.m.Values()
+// Values returns an iterator over all values in the map.
+// The iteration order is unspecified, like for a Go map.
+// Each iteration sees a snapshot taken when it starts and holds no lock while it runs,
+// so the loop body may modify the map.
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Values() iter.Seq[V] {
+	return func(yield func(V) bool) {
+		c.mu.RLock()
+		values := slices.Collect(c.m.Values())
+		c.mu.RUnlock()
+		for _, v := range values {
+			if !yield(v) {
+				return
+			}
+		}
+	}
 }
 
 // Clear removes all elements from the map.

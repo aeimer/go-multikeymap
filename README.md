@@ -95,8 +95,8 @@ func main() {
 	// keyA: Cityname, keyB: Population
 	bm := bikeymap.New[string, int, City]()
 	// or: bm := bikeymap.NewConcurrent[string, int, City]()
-	bm.Put("Berlin", 3_500_000, City{"Berlin", 3_500_000})
-	bm.Put("Hamburg", 1_800_000, City{"Hamburg", 1_800_000})
+	_ = bm.Set("Berlin", 3_500_000, City{"Berlin", 3_500_000})
+	_ = bm.Set("Hamburg", 1_800_000, City{"Hamburg", 1_800_000})
 	bm.GetByKeyA("Berlin")  // City{"Berlin", 3_500_000}
 	bm.GetByKeyB(1_800_000) // City{"Hamburg", 1_800_000}
 }
