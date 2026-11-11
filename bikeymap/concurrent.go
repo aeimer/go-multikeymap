@@ -10,14 +10,17 @@ import (
 // ConcurrentBiKeyMap is the same as BiKeyMap, but it is safe for concurrent use.
 // It uses a RWMutex to protect the map from concurrent reads and writes.
 // Therefore, it is slower than BiKeyMap, but it is safe for concurrent use.
+// The zero value is an empty map ready to use.
+// A ConcurrentBiKeyMap must not be copied after first use.
 type ConcurrentBiKeyMap[KeyA comparable, KeyB comparable, V any] struct {
 	mu sync.RWMutex
 	m  BiKeyMap[KeyA, KeyB, V]
 }
 
-// NewConcurrent creates a new instance of ConcurrentBiKeyMap.
+// NewConcurrent returns a new empty ConcurrentBiKeyMap.
+// It is equivalent to new(ConcurrentBiKeyMap[KeyA, KeyB, V]).
 func NewConcurrent[KeyA comparable, KeyB comparable, V any]() *ConcurrentBiKeyMap[KeyA, KeyB, V] {
-	return &ConcurrentBiKeyMap[KeyA, KeyB, V]{m: *New[KeyA, KeyB, V]()}
+	return new(ConcurrentBiKeyMap[KeyA, KeyB, V])
 }
 
 // Set stores value under keyA and keyB and pairs the two keys.

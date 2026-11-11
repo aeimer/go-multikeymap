@@ -7,6 +7,7 @@ import (
 )
 
 // BiKeyMap is a generic in-memory map with two independent keys for each value.
+// The zero value is an empty map ready to use.
 // A BiKeyMap is not safe for concurrent use; use ConcurrentBiKeyMap instead.
 type BiKeyMap[KeyA comparable, KeyB comparable, V any] struct {
 	dataByKeyA map[KeyA]V
@@ -14,13 +15,10 @@ type BiKeyMap[KeyA comparable, KeyB comparable, V any] struct {
 	keyBByKeyA map[KeyA]KeyB
 }
 
-// New creates a new instance of BiKeyMap.
+// New returns a new empty BiKeyMap.
+// It is equivalent to new(BiKeyMap[KeyA, KeyB, V]).
 func New[KeyA comparable, KeyB comparable, V any]() *BiKeyMap[KeyA, KeyB, V] {
-	return &BiKeyMap[KeyA, KeyB, V]{
-		dataByKeyA: make(map[KeyA]V),
-		keyAByKeyB: make(map[KeyB]KeyA),
-		keyBByKeyA: make(map[KeyA]KeyB),
-	}
+	return new(BiKeyMap[KeyA, KeyB, V])
 }
 
 // Set stores value under keyA and keyB and pairs the two keys.
@@ -36,6 +34,11 @@ func (m *BiKeyMap[KeyA, KeyB, V]) Set(keyA KeyA, keyB KeyB, value V) error {
 	}
 
 	// Store the value and pair both keys.
+	if m.dataByKeyA == nil {
+		m.dataByKeyA = make(map[KeyA]V)
+		m.keyAByKeyB = make(map[KeyB]KeyA)
+		m.keyBByKeyA = make(map[KeyA]KeyB)
+	}
 	m.dataByKeyA[keyA] = value
 	m.keyAByKeyB[keyB] = keyA
 	m.keyBByKeyA[keyA] = keyB
@@ -103,9 +106,7 @@ func (m *BiKeyMap[KeyA, KeyB, V]) Values() iter.Seq[V] {
 
 // Clear removes all elements from the map.
 func (m *BiKeyMap[KeyA, KeyB, V]) Clear() {
-	m.dataByKeyA = make(map[KeyA]V)
-	m.keyAByKeyB = make(map[KeyB]KeyA)
-	m.keyBByKeyA = make(map[KeyA]KeyB)
+	*m = BiKeyMap[KeyA, KeyB, V]{}
 }
 
 // String returns a string representation of the map.

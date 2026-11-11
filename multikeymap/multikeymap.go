@@ -7,6 +7,7 @@ import (
 
 // MultiKeyMap is a generic in-memory map with a primary key and multiple secondary keys.
 // Secondary keys are strings, organised in named groups.
+// The zero value is an empty map ready to use.
 // A MultiKeyMap is not safe for concurrent use; use ConcurrentMultiKeyMap instead.
 type MultiKeyMap[K comparable, V any] struct {
 	primary     map[K]V
@@ -14,18 +15,18 @@ type MultiKeyMap[K comparable, V any] struct {
 	secondaryTo map[K]map[string]map[string]struct{} // PrimaryKey -> Group -> set of SecondaryKeys
 }
 
-// New creates a new MultiKeyMap instance.
+// New returns a new empty MultiKeyMap.
+// It is equivalent to new(MultiKeyMap[K, V]).
 func New[K comparable, V any]() *MultiKeyMap[K, V] {
-	return &MultiKeyMap[K, V]{
-		primary:     make(map[K]V),
-		secondary:   make(map[string]map[string]K),
-		secondaryTo: make(map[K]map[string]map[string]struct{}),
-	}
+	return new(MultiKeyMap[K, V])
 }
 
 // Set stores value under primaryKey.
 // If primaryKey exists, Set replaces its value and keeps its secondary keys.
 func (m *MultiKeyMap[K, V]) Set(primaryKey K, value V) {
+	if m.primary == nil {
+		m.primary = make(map[K]V)
+	}
 	m.primary[primaryKey] = value
 }
 
@@ -39,6 +40,10 @@ func (m *MultiKeyMap[K, V]) AddSecondaryKeys(primaryKey K, group string, keys ..
 	}
 	if len(keys) == 0 {
 		return true
+	}
+	if m.secondary == nil {
+		m.secondary = make(map[string]map[string]K)
+		m.secondaryTo = make(map[K]map[string]map[string]struct{})
 	}
 	if m.secondary[group] == nil {
 		m.secondary[group] = make(map[string]K)
@@ -160,9 +165,7 @@ func (m *MultiKeyMap[K, V]) Values() iter.Seq[V] {
 
 // Clear removes all elements from the map.
 func (m *MultiKeyMap[K, V]) Clear() {
-	m.primary = make(map[K]V)
-	m.secondary = make(map[string]map[string]K)
-	m.secondaryTo = make(map[K]map[string]map[string]struct{})
+	*m = MultiKeyMap[K, V]{}
 }
 
 // String returns a string representation of the map.

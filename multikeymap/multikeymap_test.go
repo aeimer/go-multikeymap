@@ -238,6 +238,37 @@ func TestMultiKeyMap_Clear(t *testing.T) {
 	}
 }
 
+func TestMultiKeyMap_ZeroValueReads(t *testing.T) {
+	var mm MultiKeyMap[string, int]
+	_, ok := mm.Get("key1")
+	assert.False(t, ok)
+	_, ok = mm.GetBySecondaryKey("group1", "secKey1")
+	assert.False(t, ok)
+	assert.False(t, mm.Has("key1"))
+	assert.False(t, mm.HasSecondaryKey("group1", "secKey1"))
+	assert.Empty(t, mm.KeyGroups())
+	assert.Equal(t, 0, mm.Len())
+	assert.Empty(t, slices.Collect(mm.Values()))
+	assert.Equal(t, "MultiKeyMap: map[]", mm.String())
+	assert.False(t, mm.AddSecondaryKeys("key1", "group1", "secKey1"))
+	mm.Delete("key1")
+	mm.Clear()
+	assert.Equal(t, 0, mm.Len())
+}
+
+func TestMultiKeyMap_ZeroValueWrites(t *testing.T) {
+	var mm MultiKeyMap[string, int]
+	mm.Set("key1", 1)
+	assert.True(t, mm.AddSecondaryKeys("key1", "group1", "secKey1"))
+	value, ok := mm.GetBySecondaryKey("group1", "secKey1")
+	assert.True(t, ok)
+	assert.Equal(t, 1, value)
+	mm.Clear()
+	mm.Set("key2", 2)
+	assert.True(t, mm.AddSecondaryKeys("key2", "group1", "secKey2"))
+	assert.Equal(t, map[string]map[string]string{"group1": {"secKey2": "key2"}}, mm.KeyGroups())
+}
+
 // Benchmarks
 
 var benchmarkSizes = []struct {
