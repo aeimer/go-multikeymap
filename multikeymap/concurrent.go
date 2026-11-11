@@ -138,6 +138,17 @@ func (c *ConcurrentMultiKeyMap[K, V]) LoadAndDelete(primaryKey K) (value V, load
 	return c.m.LoadAndDelete(primaryKey)
 }
 
+// LoadAndDeleteBySecondaryKey removes the primary key that the secondary key in group points to,
+// its value and all its secondary keys, like DeleteBySecondaryKey,
+// and returns the previous value, if any.
+// The loaded result reports whether the secondary key existed.
+// The lookup and the delete happen atomically.
+func (c *ConcurrentMultiKeyMap[K, V]) LoadAndDeleteBySecondaryKey(group string, key string) (value V, loaded bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.m.LoadAndDeleteBySecondaryKey(group, key)
+}
+
 // Update calls fn with the current value of primaryKey and whether it exists.
 // If fn returns true, Update stores the returned value under primaryKey;
 // it creates primaryKey if needed and keeps its existing secondary keys.

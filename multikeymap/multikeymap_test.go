@@ -965,3 +965,37 @@ func TestMultiKeyMap_Clear_DuringRange(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, 4, value)
 }
+
+func TestMultiKeyMap_LoadAndDeleteBySecondaryKey(t *testing.T) {
+	// given
+	var mm MultiKeyMap[string, int]
+
+	// when
+	_, loaded := mm.LoadAndDeleteBySecondaryKey("group1", "secKey1")
+
+	// then
+	assert.False(t, loaded)
+
+	// given
+	mm.Set("key1", 1)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1")
+	mm.AddSecondaryKeys("key1", "group2", "secKey2")
+	mm.Set("key2", 2)
+
+	// when
+	value, loaded := mm.LoadAndDeleteBySecondaryKey("group1", "secKey1")
+
+	// then
+	assert.True(t, loaded)
+	assert.Equal(t, 1, value)
+	assert.False(t, mm.Has("key1"))
+	assert.False(t, mm.HasSecondaryKey("group1", "secKey1"))
+	assert.False(t, mm.HasSecondaryKey("group2", "secKey2"))
+	assert.True(t, mm.Has("key2"))
+
+	// when
+	_, loaded = mm.LoadAndDeleteBySecondaryKey("group1", "secKey1")
+
+	// then
+	assert.False(t, loaded)
+}
