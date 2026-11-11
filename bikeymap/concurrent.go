@@ -25,14 +25,18 @@ func NewConcurrent[KeyA comparable, KeyB comparable, V any]() *ConcurrentBiKeyMa
 }
 
 // Set stores value under keyA and keyB and pairs the two keys.
-// If keyB is already paired with a different keyA, Set returns ErrKeyBConflict.
-// Otherwise, if keyA is already paired with a different keyB, Set returns ErrKeyAConflict.
-// On an error Set changes nothing.
 // If both keys are already paired with each other, Set replaces the value.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Set(keyA KeyA, keyB KeyB, value V) error {
+// If keyA is paired with a different keyB, Set removes that old keyB;
+// keyA keeps its entry, now with keyB and value.
+// If keyB is paired with a different keyA, Set removes that old keyA and its value.
+// No key is ever left without its pair.
+// Len grows by one if both keys are new, shrinks by one if both cases above apply,
+// and stays the same otherwise.
+// The removals and the store happen atomically.
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Set(keyA KeyA, keyB KeyB, value V) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.m.Set(keyA, keyB, value)
+	c.m.Set(keyA, keyB, value)
 }
 
 // GetByKeyA retrieves a value using the first key.

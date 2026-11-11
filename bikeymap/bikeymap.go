@@ -8,17 +8,10 @@
 package bikeymap
 
 import (
-	"errors"
 	"fmt"
 	"iter"
 	"maps"
 )
-
-// ErrKeyAConflict is returned by Set when keyA is already paired with a different keyB.
-var ErrKeyAConflict = errors.New("bikeymap: keyA is paired with a different keyB")
-
-// ErrKeyBConflict is returned by Set when keyB is already paired with a different keyA.
-var ErrKeyBConflict = errors.New("bikeymap: keyB is paired with a different keyA")
 
 // BiKeyMap is a generic in-memory map with two independent keys for each value.
 // The zero value is an empty map ready to use.
@@ -41,27 +34,28 @@ func New[KeyA comparable, KeyB comparable, V any]() *BiKeyMap[KeyA, KeyB, V] {
 }
 
 // Set stores value under keyA and keyB and pairs the two keys.
-// If keyB is already paired with a different keyA, Set returns ErrKeyBConflict.
-// Otherwise, if keyA is already paired with a different keyB, Set returns ErrKeyAConflict.
-// On an error Set changes nothing.
 // If both keys are already paired with each other, Set replaces the value.
-func (m *BiKeyMap[KeyA, KeyB, V]) Set(keyA KeyA, keyB KeyB, value V) error {
-	// Check if one key is set without the other, or if they do not point to each other.
-	if existingKeyA, keyBExists := m.byKeyB[keyB]; keyBExists && existingKeyA != keyA {
-		return ErrKeyBConflict
-	}
-	if e, keyAExists := m.byKeyA[keyA]; keyAExists && e.keyB != keyB {
-		return ErrKeyAConflict
-	}
-
-	// Store the value and pair both keys.
+// If keyA is paired with a different keyB, Set removes that old keyB;
+// keyA keeps its entry, now with keyB and value.
+// If keyB is paired with a different keyA, Set removes that old keyA and its value.
+// No key is ever left without its pair.
+// Len grows by one if both keys are new, shrinks by one if both cases above apply,
+// and stays the same otherwise.
+func (m *BiKeyMap[KeyA, KeyB, V]) Set(keyA KeyA, keyB KeyB, value V) {
 	if m.byKeyA == nil {
 		m.byKeyA = make(map[KeyA]entry[KeyB, V])
 		m.byKeyB = make(map[KeyB]KeyA)
 	}
+	// Drop the other half of each conflicting pair; the half that shares a key
+	// with the new pair is overwritten below.
+	if e, exists := m.byKeyA[keyA]; exists && e.keyB != keyB {
+		delete(m.byKeyB, e.keyB)
+	}
+	if oldKeyA, exists := m.byKeyB[keyB]; exists && oldKeyA != keyA {
+		delete(m.byKeyA, oldKeyA)
+	}
 	m.byKeyA[keyA] = entry[KeyB, V]{keyB: keyB, value: value}
 	m.byKeyB[keyB] = keyA
-	return nil
 }
 
 // GetByKeyA retrieves a value using the first key.

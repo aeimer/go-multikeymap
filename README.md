@@ -29,7 +29,7 @@ The access is O(1+1) => O(1) due to the underlying hashmap.
 
   ```go
   m := bikeymap.New[string, int, string]() // keyA: city, keyB: postcode
-  _ = m.Set("Berlin", 10115, "capital")
+  m.Set("Berlin", 10115, "capital")
   m.GetByKeyA("Berlin") // "capital", true
   m.GetByKeyB(10115)    // "capital", true
   ```
@@ -132,7 +132,6 @@ You can use it like this:
 package main
 
 import (
-  "errors"
   "fmt"
 
   "github.com/aeimer/go-multikeymap/bikeymap"
@@ -147,16 +146,17 @@ func main() {
   bm := bikeymap.New[string, int, City]()
   // or: bm := bikeymap.NewConcurrent[string, int, City]()
   // the zero value works too: var bm bikeymap.BiKeyMap[string, int, City]
-  _ = bm.Set("Berlin", 3_500_000, City{"Berlin", 3_500_000})
-  _ = bm.Set("Hamburg", 1_800_000, City{"Hamburg", 1_800_000})
+  bm.Set("Berlin", 3_500_000, City{"Berlin", 3_500_000})
+  bm.Set("Hamburg", 1_800_000, City{"Hamburg", 1_800_000})
   bm.GetByKeyA("Berlin")  // City{"Berlin", 3_500_000}, true
   bm.GetByKeyB(1_800_000) // City{"Hamburg", 1_800_000}, true
   bm.KeyA(1_800_000)      // "Hamburg", true
   bm.KeyB("Berlin")       // 3_500_000, true
 
-  // Both keys must stay unique.
-  err := bm.Set("Munich", 3_500_000, City{"Munich", 1_500_000})
-  errors.Is(err, bikeymap.ErrKeyBConflict) // true
+  // Both keys stay unique: Set removes Berlin, which was paired with 3_500_000.
+  bm.Set("Munich", 3_500_000, City{"Munich", 1_500_000})
+  bm.GetByKeyA("Berlin") // City{}, false
+  bm.Set("Berlin", 3_500_000, City{"Berlin", 3_500_000}) // removes Munich again
 
   for name := range bm.KeysA() {
     fmt.Println(name)

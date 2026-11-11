@@ -8,12 +8,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func ExampleNew() {
 	bm := New[string, int, string]()
-	_ = bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA1", 1, "value1")
 	value, exists := bm.GetByKeyA("keyA1")
 	fmt.Printf("[Key A] value: %v, exists: %v\n", value, exists)
 	value, exists = bm.GetByKeyB(1)
@@ -28,10 +27,9 @@ func TestBiKeyMap_SetAndGet(t *testing.T) {
 	bm := New[string, int, string]()
 
 	// when
-	err := bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA1", 1, "value1")
 
 	// then
-	require.NoError(t, err)
 	value, exists := bm.GetByKeyA("keyA1")
 	if !exists || value != "value1" {
 		t.Errorf("expected value1, got %v", value)
@@ -42,45 +40,76 @@ func TestBiKeyMap_SetAndGet(t *testing.T) {
 	}
 }
 
-func TestBiKeyMap_SetDuplicateKeys(t *testing.T) {
-	// given
-	bm := New[string, int, string]()
-	err := bm.Set("keyA1", 1, "value1")
-	require.NoError(t, err)
+func TestBiKeyMap_Set_Overwrite(t *testing.T) {
+	tests := []struct {
+		name      string
+		givenKeyA string
+		givenKeyB int
+		wantAll   map[string]string
+		wantPairs map[string]int
+	}{
+		{
+			name:      "new pair",
+			givenKeyA: "keyA3", givenKeyB: 3,
+			wantAll:   map[string]string{"keyA1": "value1", "keyA2": "value2", "keyA3": "new"},
+			wantPairs: map[string]int{"keyA1": 1, "keyA2": 2, "keyA3": 3},
+		},
+		{
+			name:      "same pair replaces the value",
+			givenKeyA: "keyA1", givenKeyB: 1,
+			wantAll:   map[string]string{"keyA1": "new", "keyA2": "value2"},
+			wantPairs: map[string]int{"keyA1": 1, "keyA2": 2},
+		},
+		{
+			name:      "keyA paired with another keyB",
+			givenKeyA: "keyA1", givenKeyB: 3,
+			wantAll:   map[string]string{"keyA1": "new", "keyA2": "value2"},
+			wantPairs: map[string]int{"keyA1": 3, "keyA2": 2},
+		},
+		{
+			name:      "keyB paired with another keyA",
+			givenKeyA: "keyA3", givenKeyB: 1,
+			wantAll:   map[string]string{"keyA2": "value2", "keyA3": "new"},
+			wantPairs: map[string]int{"keyA2": 2, "keyA3": 1},
+		},
+		{
+			name:      "both keys paired with others",
+			givenKeyA: "keyA1", givenKeyB: 2,
+			wantAll:   map[string]string{"keyA1": "new"},
+			wantPairs: map[string]int{"keyA1": 2},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// given
+			bm := New[string, int, string]()
+			bm.Set("keyA1", 1, "value1")
+			bm.Set("keyA2", 2, "value2")
 
-	// when
-	// keyB 1 is already paired with keyA1.
-	err = bm.Set("keyA2", 1, "value2")
+			// when
+			bm.Set(tt.givenKeyA, tt.givenKeyB, "new")
 
-	// then
-	require.ErrorIs(t, err, ErrKeyBConflict)
-	require.EqualError(t, err, "bikeymap: keyB is paired with a different keyA")
-
-	// when
-	// keyA1 is already paired with keyB 1.
-	err = bm.Set("keyA1", 2, "value2")
-
-	// then
-	require.ErrorIs(t, err, ErrKeyAConflict)
-	require.EqualError(t, err, "bikeymap: keyA is paired with a different keyB")
-
-	// given
-	require.NoError(t, bm.Set("keyA3", 3, "value3"))
-
-	// when
-	// Both keys conflict: the keyB conflict is reported.
-	err = bm.Set("keyA1", 3, "value4")
-
-	// then
-	require.ErrorIs(t, err, ErrKeyBConflict)
-	assert.Equal(t, map[string]string{"keyA1": "value1", "keyA3": "value3"}, maps.Collect(bm.All()))
+			// then
+			assert.Equal(t, tt.wantAll, maps.Collect(bm.All()))
+			assert.Equal(t, len(tt.wantAll), bm.Len())
+			for keyA, keyB := range tt.wantPairs {
+				gotKeyB, ok := bm.KeyB(keyA)
+				assert.True(t, ok)
+				assert.Equal(t, keyB, gotKeyB)
+				gotKeyA, ok := bm.KeyA(keyB)
+				assert.True(t, ok)
+				assert.Equal(t, keyA, gotKeyA)
+			}
+			// Both indexes hold exactly the same pairs.
+			assert.ElementsMatch(t, slices.Collect(maps.Values(tt.wantPairs)), slices.Collect(bm.KeysB()))
+		})
+	}
 }
 
 func TestBiKeyMap_DeleteByKeyA(t *testing.T) {
 	// given
 	bm := New[string, int, string]()
-	err := bm.Set("keyA1", 1, "value1")
-	require.NoError(t, err)
+	bm.Set("keyA1", 1, "value1")
 
 	// when
 	bm.DeleteByKeyA("keyA1")
@@ -99,8 +128,7 @@ func TestBiKeyMap_DeleteByKeyA(t *testing.T) {
 func TestBiKeyMap_DeleteByKeyB(t *testing.T) {
 	// given
 	bm := New[string, int, string]()
-	err := bm.Set("keyA1", 1, "value1")
-	require.NoError(t, err)
+	bm.Set("keyA1", 1, "value1")
 
 	// when
 	bm.DeleteByKeyB(1)
@@ -119,8 +147,7 @@ func TestBiKeyMap_DeleteByKeyB(t *testing.T) {
 func TestBiKeyMap_String(t *testing.T) {
 	// given
 	bm := New[string, int, string]()
-	err := bm.Set("keyA1", 1, "value1")
-	require.NoError(t, err)
+	bm.Set("keyA1", 1, "value1")
 	expected := "BiKeyMap: map[keyA1:value1]"
 
 	// when / then
@@ -130,7 +157,7 @@ func TestBiKeyMap_String(t *testing.T) {
 func TestBiKeyMap_DeleteByKeyA_NotFound(t *testing.T) {
 	// given
 	bm := New[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	bm.Set("keyA1", 1, "value1")
 
 	// when
 	bm.DeleteByKeyA("nonExistentKey")
@@ -142,7 +169,7 @@ func TestBiKeyMap_DeleteByKeyA_NotFound(t *testing.T) {
 func TestBiKeyMap_DeleteByKeyB_NotFound(t *testing.T) {
 	// given
 	bm := New[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	bm.Set("keyA1", 1, "value1")
 
 	// when
 	bm.DeleteByKeyB(999)
@@ -159,7 +186,7 @@ func TestBiKeyMap_Len(t *testing.T) {
 	assert.Equal(t, 0, bm.Len())
 
 	// when
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	bm.Set("keyA1", 1, "value1")
 
 	// then
 	assert.Equal(t, 1, bm.Len())
@@ -168,8 +195,8 @@ func TestBiKeyMap_Len(t *testing.T) {
 func TestBiKeyMap_Clear(t *testing.T) {
 	// given
 	bm := New[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
 
 	// when
 	bm.Clear()
@@ -181,12 +208,12 @@ func TestBiKeyMap_Clear(t *testing.T) {
 func TestBiKeyMap_ValuesReadsMapWhenIterationStarts(t *testing.T) {
 	// given
 	bm := New[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	bm.Set("keyA1", 1, "value1")
 
 	// when
 	values := bm.Values()
 	bm.Clear()
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA2", 2, "value2")
 
 	// then
 	assert.Equal(t, []string{"value2"}, slices.Collect(values))
@@ -195,8 +222,8 @@ func TestBiKeyMap_ValuesReadsMapWhenIterationStarts(t *testing.T) {
 func TestBiKeyMap_ValuesStopsEarly(t *testing.T) {
 	// given
 	bm := New[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
 
 	// when
 	count := 0
@@ -212,8 +239,8 @@ func TestBiKeyMap_ValuesStopsEarly(t *testing.T) {
 func TestBiKeyMap_Values(t *testing.T) {
 	// given
 	bm := New[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
 
 	// when / then
 	assert.ElementsMatch(t, []string{"value1", "value2"}, slices.Collect(bm.Values()))
@@ -246,7 +273,7 @@ func TestBiKeyMap_ZeroValueWrites(t *testing.T) {
 	var bm BiKeyMap[string, int, string]
 
 	// when
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	bm.Set("keyA1", 1, "value1")
 
 	// then
 	value, ok := bm.GetByKeyB(1)
@@ -255,7 +282,7 @@ func TestBiKeyMap_ZeroValueWrites(t *testing.T) {
 
 	// when
 	bm.Clear()
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA2", 2, "value2")
 
 	// then
 	assert.Equal(t, 1, bm.Len())
@@ -264,8 +291,8 @@ func TestBiKeyMap_ZeroValueWrites(t *testing.T) {
 func TestBiKeyMap_All(t *testing.T) {
 	// given
 	bm := New[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
 
 	// when / then
 	assert.Equal(t, map[string]string{"keyA1": "value1", "keyA2": "value2"}, maps.Collect(bm.All()))
@@ -274,8 +301,8 @@ func TestBiKeyMap_All(t *testing.T) {
 func TestBiKeyMap_Keys(t *testing.T) {
 	// given
 	bm := New[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
 
 	// when / then
 	assert.ElementsMatch(t, []string{"keyA1", "keyA2"}, slices.Collect(bm.KeysA()))
@@ -285,8 +312,8 @@ func TestBiKeyMap_Keys(t *testing.T) {
 func TestBiKeyMap_IteratorsStopEarly(t *testing.T) {
 	// given
 	bm := New[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
 
 	// when
 	count := 0
@@ -313,7 +340,7 @@ func TestBiKeyMap_IteratorsReadMapWhenIterationStarts(t *testing.T) {
 
 	// when
 	all, keysA, keysB := bm.All(), bm.KeysA(), bm.KeysB()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	bm.Set("keyA1", 1, "value1")
 
 	// then
 	assert.Equal(t, map[string]string{"keyA1": "value1"}, maps.Collect(all))
@@ -324,7 +351,7 @@ func TestBiKeyMap_IteratorsReadMapWhenIterationStarts(t *testing.T) {
 func TestBiKeyMap_KeyAAndKeyB(t *testing.T) {
 	// given
 	bm := New[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	bm.Set("keyA1", 1, "value1")
 
 	// when
 	keyA, ok := bm.KeyA(1)
@@ -366,8 +393,8 @@ func TestBiKeyMap_LoadAndDeleteByKeyA(t *testing.T) {
 	assert.False(t, loaded)
 
 	// given
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
 
 	// when
 	value, loaded := bm.LoadAndDeleteByKeyA("keyA1")
@@ -397,8 +424,8 @@ func TestBiKeyMap_LoadAndDeleteByKeyB(t *testing.T) {
 	assert.False(t, loaded)
 
 	// given
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
 
 	// when
 	value, loaded := bm.LoadAndDeleteByKeyB(1)
@@ -420,8 +447,8 @@ func TestBiKeyMap_LoadAndDeleteByKeyB(t *testing.T) {
 func TestBiKeyMap_Clone(t *testing.T) {
 	// given
 	bm := New[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
 
 	// when
 	clone := bm.Clone()
@@ -431,10 +458,10 @@ func TestBiKeyMap_Clone(t *testing.T) {
 
 	// when
 	// Changes to the clone and to the original stay apart.
-	require.NoError(t, clone.Set("keyA1", 1, "changed"))
-	require.NoError(t, clone.Set("keyA3", 3, "value3"))
+	clone.Set("keyA1", 1, "changed")
+	clone.Set("keyA3", 3, "value3")
 	clone.DeleteByKeyB(2)
-	require.NoError(t, bm.Set("keyA4", 4, "value4"))
+	bm.Set("keyA4", 4, "value4")
 
 	// then
 	assert.Equal(t, map[string]string{"keyA1": "value1", "keyA2": "value2", "keyA4": "value4"}, maps.Collect(bm.All()))
@@ -447,7 +474,7 @@ func TestBiKeyMap_CloneCopiesValuesShallowly(t *testing.T) {
 	// given
 	bm := New[string, int, *int]()
 	value := 1
-	require.NoError(t, bm.Set("keyA1", 1, &value))
+	bm.Set("keyA1", 1, &value)
 
 	// when
 	clone := bm.Clone()
@@ -468,7 +495,7 @@ func TestBiKeyMap_CloneZeroValue(t *testing.T) {
 	assert.Equal(t, 0, clone.Len())
 
 	// when
-	require.NoError(t, clone.Set("keyA1", 1, "value1"))
+	clone.Set("keyA1", 1, "value1")
 
 	// then
 	assert.Equal(t, 0, bm.Len())
@@ -478,7 +505,7 @@ func TestBiKeyMap_DeleteFunc(t *testing.T) {
 	// given
 	bm := New[string, int, string]()
 	for i := range 4 {
-		require.NoError(t, bm.Set("keyA"+strconv.Itoa(i), i, "value"+strconv.Itoa(i)))
+		bm.Set("keyA"+strconv.Itoa(i), i, "value"+strconv.Itoa(i))
 	}
 
 	// when
@@ -520,7 +547,7 @@ func BenchmarkBiKeyMapGet(b *testing.B) {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
 			m := New[string, int, string]()
 			for n := range v.size {
-				_ = m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
+				m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
 			}
 			b.ResetTimer()
 			for range b.N {
@@ -540,7 +567,7 @@ func BenchmarkBiKeyMapSet(b *testing.B) {
 			b.ResetTimer()
 			for range b.N {
 				for n := range v.size {
-					_ = m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
+					m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
 				}
 			}
 		})
@@ -555,7 +582,7 @@ func BenchmarkBiKeyMapDelete(b *testing.B) {
 				// Refill outside the timer so that every iteration deletes existing keys.
 				b.StopTimer()
 				for n := range v.size {
-					_ = m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
+					m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
 				}
 				b.StartTimer()
 				for n := range v.size {
@@ -569,9 +596,9 @@ func BenchmarkBiKeyMapDelete(b *testing.B) {
 func TestBiKeyMap_Clear_DuringRange(t *testing.T) {
 	// given
 	bm := New[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
-	require.NoError(t, bm.Set("keyA3", 3, "value3"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
+	bm.Set("keyA3", 3, "value3")
 
 	// when
 	yielded := 0
@@ -587,7 +614,7 @@ func TestBiKeyMap_Clear_DuringRange(t *testing.T) {
 	assert.False(t, ok)
 
 	// when
-	require.NoError(t, bm.Set("keyA4", 1, "value4"))
+	bm.Set("keyA4", 1, "value4")
 
 	// then
 	value, ok := bm.GetByKeyB(1)
