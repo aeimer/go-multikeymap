@@ -42,6 +42,22 @@ func ExampleBiKeyMap_All() {
 	// hamburg Hamburg
 }
 
+func ExampleBiKeyMap_Pairs() {
+	m := bikeymap.New[string, int, string]()
+	m.Set("berlin", 10115, "Berlin")
+	m.Set("hamburg", 20095, "Hamburg")
+
+	// The iteration order is unspecified; collect and sort for stable output.
+	pairs := maps.Collect(m.Pairs())
+	for _, keyA := range slices.Sorted(maps.Keys(pairs)) {
+		fmt.Println(keyA, pairs[keyA])
+	}
+
+	// Output:
+	// berlin 10115
+	// hamburg 20095
+}
+
 func ExampleBiKeyMap_KeyA() {
 	m := bikeymap.New[string, int, string]()
 	m.Set("berlin", 10115, "Berlin")

@@ -621,3 +621,33 @@ func TestBiKeyMap_Clear_DuringRange(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, "value4", value)
 }
+
+func TestBiKeyMap_Pairs(t *testing.T) {
+	// given
+	bm := New[string, int, string]()
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
+
+	// when
+	pairs := maps.Collect(bm.Pairs())
+
+	// then
+	assert.Equal(t, map[string]int{"keyA1": 1, "keyA2": 2}, pairs)
+}
+
+func TestBiKeyMap_PairsStopsEarly(t *testing.T) {
+	// given
+	bm := New[string, int, string]()
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
+
+	// when
+	count := 0
+	for range bm.Pairs() {
+		count++
+		break
+	}
+
+	// then
+	assert.Equal(t, 1, count)
+}

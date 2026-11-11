@@ -156,6 +156,18 @@ func (m *BiKeyMap[KeyA, KeyB, V]) All() iter.Seq2[KeyA, V] {
 	}
 }
 
+// Pairs returns an iterator over all pairs of keyA and keyB.
+// The iteration order is unspecified, like for a Go map.
+func (m *BiKeyMap[KeyA, KeyB, V]) Pairs() iter.Seq2[KeyA, KeyB] {
+	return func(yield func(KeyA, KeyB) bool) {
+		for keyA, e := range m.byKeyA {
+			if !yield(keyA, e.keyB) {
+				return
+			}
+		}
+	}
+}
+
 // KeysA returns an iterator over all keyA keys.
 // The iteration order is unspecified, like for a Go map.
 func (m *BiKeyMap[KeyA, KeyB, V]) KeysA() iter.Seq[KeyA] {

@@ -120,6 +120,14 @@ func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) All() iter.Seq2[KeyA, V] {
 	return snapshot2(&c.mu, c.m.All)
 }
 
+// Pairs returns an iterator over all pairs of keyA and keyB.
+// The iteration order is unspecified, like for a Go map.
+// Each iteration sees a snapshot taken when it starts and holds no lock while it runs,
+// so the loop body may modify the map.
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Pairs() iter.Seq2[KeyA, KeyB] {
+	return snapshot2(&c.mu, c.m.Pairs)
+}
+
 // KeysA returns an iterator over all keyA keys.
 // The iteration order is unspecified, like for a Go map.
 // Each iteration sees a snapshot taken when it starts and holds no lock while it runs,
