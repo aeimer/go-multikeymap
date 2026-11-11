@@ -2,6 +2,7 @@ package multikeymap
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strconv"
 	"testing"
@@ -267,6 +268,44 @@ func TestMultiKeyMap_ZeroValueWrites(t *testing.T) {
 	mm.Set("key2", 2)
 	assert.True(t, mm.AddSecondaryKeys("key2", "group1", "secKey2"))
 	assert.Equal(t, map[string]map[string]string{"group1": {"secKey2": "key2"}}, mm.KeyGroups())
+}
+
+func TestMultiKeyMap_All(t *testing.T) {
+	mm := New[string, int]()
+	mm.Set("key1", 1)
+	mm.Set("key2", 2)
+	assert.Equal(t, map[string]int{"key1": 1, "key2": 2}, maps.Collect(mm.All()))
+}
+
+func TestMultiKeyMap_Keys(t *testing.T) {
+	mm := New[string, int]()
+	mm.Set("key1", 1)
+	mm.Set("key2", 2)
+	assert.ElementsMatch(t, []string{"key1", "key2"}, slices.Collect(mm.Keys()))
+}
+
+func TestMultiKeyMap_IteratorsStopEarly(t *testing.T) {
+	mm := New[string, int]()
+	mm.Set("key1", 1)
+	mm.Set("key2", 2)
+	count := 0
+	for range mm.All() {
+		count++
+		break
+	}
+	for range mm.Keys() {
+		count++
+		break
+	}
+	assert.Equal(t, 2, count)
+}
+
+func TestMultiKeyMap_IteratorsReadMapWhenIterationStarts(t *testing.T) {
+	var mm MultiKeyMap[string, int]
+	all, keys := mm.All(), mm.Keys()
+	mm.Set("key1", 1)
+	assert.Equal(t, map[string]int{"key1": 1}, maps.Collect(all))
+	assert.Equal(t, []string{"key1"}, slices.Collect(keys))
 }
 
 // Benchmarks

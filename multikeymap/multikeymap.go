@@ -151,6 +151,30 @@ func (m *MultiKeyMap[K, V]) Len() int {
 	return len(m.primary)
 }
 
+// All returns an iterator over all primary keys and their values.
+// The iteration order is unspecified, like for a Go map.
+func (m *MultiKeyMap[K, V]) All() iter.Seq2[K, V] {
+	return func(yield func(K, V) bool) {
+		for k, v := range m.primary {
+			if !yield(k, v) {
+				return
+			}
+		}
+	}
+}
+
+// Keys returns an iterator over all primary keys.
+// The iteration order is unspecified, like for a Go map.
+func (m *MultiKeyMap[K, V]) Keys() iter.Seq[K] {
+	return func(yield func(K) bool) {
+		for k := range m.primary {
+			if !yield(k) {
+				return
+			}
+		}
+	}
+}
+
 // Values returns an iterator over all values in the map.
 // The iteration order is unspecified, like for a Go map.
 func (m *MultiKeyMap[K, V]) Values() iter.Seq[V] {

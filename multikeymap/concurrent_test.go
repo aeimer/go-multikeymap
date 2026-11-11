@@ -2,10 +2,12 @@ package multikeymap
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -161,6 +163,71 @@ func TestConcurrentMultiKeyMap_Clear(t *testing.T) {
 	mm.Clear()
 	if mm.Len() != 0 {
 		t.Error("expected map to be empty after clear")
+	}
+}
+
+func TestConcurrentMultiKeyMap_All(t *testing.T) {
+	mm := NewConcurrent[string, int]()
+	mm.Set("key1", 1)
+	mm.Set("key2", 2)
+	assert.Equal(t, map[string]int{"key1": 1, "key2": 2}, maps.Collect(mm.All()))
+}
+
+func TestConcurrentMultiKeyMap_Keys(t *testing.T) {
+	mm := NewConcurrent[string, int]()
+	mm.Set("key1", 1)
+	mm.Set("key2", 2)
+	assert.ElementsMatch(t, []string{"key1", "key2"}, slices.Collect(mm.Keys()))
+}
+
+func TestConcurrentMultiKeyMap_IteratorsStopEarly(t *testing.T) {
+	mm := NewConcurrent[string, int]()
+	mm.Set("key1", 1)
+	mm.Set("key2", 2)
+	count := 0
+	for range mm.All() {
+		count++
+		break
+	}
+	for range mm.Keys() {
+		count++
+		break
+	}
+	assert.Equal(t, 2, count)
+}
+
+func TestConcurrentMultiKeyMap_IteratorsAllowWritesInLoop(t *testing.T) {
+	mm := NewConcurrent[string, int]()
+	mm.Set("key1", 1)
+	mm.Set("key2", 2)
+	requireNoDeadlock(t, func() {
+		for k, v := range mm.All() {
+			mm.Delete(k)
+			mm.Set("all"+k, v)
+		}
+		for k := range mm.Keys() {
+			mm.Delete(k)
+			mm.Set("keys"+k, 0)
+		}
+		for v := range mm.Values() {
+			mm.Set("values"+strconv.Itoa(v), v)
+		}
+	})
+	assert.ElementsMatch(t, []string{"keysallkey1", "keysallkey2", "values0"}, slices.Collect(mm.Keys()))
+}
+
+// requireNoDeadlock fails the test if f does not return within a second.
+func requireNoDeadlock(t *testing.T, f func()) {
+	t.Helper()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		f()
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("deadlock: loop body could not write to the map")
 	}
 }
 

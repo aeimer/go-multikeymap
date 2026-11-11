@@ -2,6 +2,7 @@ package bikeymap
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strconv"
 	"testing"
@@ -177,6 +178,50 @@ func TestBiKeyMap_ZeroValueWrites(t *testing.T) {
 	bm.Clear()
 	require.NoError(t, bm.Set("keyA2", 2, "value2"))
 	assert.Equal(t, 1, bm.Len())
+}
+
+func TestBiKeyMap_All(t *testing.T) {
+	bm := New[string, int, string]()
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	assert.Equal(t, map[string]string{"keyA1": "value1", "keyA2": "value2"}, maps.Collect(bm.All()))
+}
+
+func TestBiKeyMap_Keys(t *testing.T) {
+	bm := New[string, int, string]()
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	assert.ElementsMatch(t, []string{"keyA1", "keyA2"}, slices.Collect(bm.KeysA()))
+	assert.ElementsMatch(t, []int{1, 2}, slices.Collect(bm.KeysB()))
+}
+
+func TestBiKeyMap_IteratorsStopEarly(t *testing.T) {
+	bm := New[string, int, string]()
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	count := 0
+	for range bm.All() {
+		count++
+		break
+	}
+	for range bm.KeysA() {
+		count++
+		break
+	}
+	for range bm.KeysB() {
+		count++
+		break
+	}
+	assert.Equal(t, 3, count)
+}
+
+func TestBiKeyMap_IteratorsReadMapWhenIterationStarts(t *testing.T) {
+	var bm BiKeyMap[string, int, string]
+	all, keysA, keysB := bm.All(), bm.KeysA(), bm.KeysB()
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	assert.Equal(t, map[string]string{"keyA1": "value1"}, maps.Collect(all))
+	assert.Equal(t, []string{"keyA1"}, slices.Collect(keysA))
+	assert.Equal(t, []int{1}, slices.Collect(keysB))
 }
 
 // Benchmarks
