@@ -6,6 +6,9 @@ DISCLAIMER: Until version 1 is reached, the API may change.
 
 A go lib which handles maps with multiple keys.
 Both data-structures are available in go routine safe (concurrent) and a non-concurrent version.
+The zero value of every type is ready to use, `New` is optional.
+Iterators (`All`, `Keys`, `Values`) follow the standard library; their order is unspecified, like for a Go map.
+The iterators of the concurrent types work on a snapshot, so the loop body may write to the map.
 
 * **MultiKeyMap** is a data structure based on go native maps.
 It has a primary key which directly maps to the values.
@@ -25,56 +28,71 @@ You can use it like this:
 ```go
 package main
 
-import "github.com/aeimer/go-multikeymap/multikeymap"
+import (
+  "fmt"
+
+  "github.com/aeimer/go-multikeymap/multikeymap"
+)
 
 func main() {
-	type City struct {
-		Name       string
-		Population int
-	}
-	mm := multikeymap.New[string, City]()
-	// or: mm := multikeymap.NewConcurrent[string, City]()
-	mm.Set("Berlin", City{"Berlin", 3_500_000})
-	mm.AddSecondaryKeys("Berlin", "postcode", "10115", "10117", "10119")
-	mm.Get("Berlin")                          // City{"Berlin", 3_500_000}
-	mm.GetBySecondaryKey("postcode", "10115") // City{"Berlin", 3_500_000}
+  type City struct {
+    Name       string
+    Population int
+  }
+  mm := multikeymap.New[string, City]()
+  // or: mm := multikeymap.NewConcurrent[string, City]()
+  // the zero value works too: var mm multikeymap.MultiKeyMap[string, City]
+  mm.Set("Berlin", City{"Berlin", 3_500_000})
+  mm.AddSecondaryKeys("Berlin", "postcode", "10115", "10117", "10119")
+  mm.Get("Berlin")                          // City{"Berlin", 3_500_000}, true
+  mm.GetBySecondaryKey("postcode", "10115") // City{"Berlin", 3_500_000}, true
+  mm.PrimaryKey("postcode", "10117")        // "Berlin", true
+
+  for group, key := range mm.SecondaryKeys("Berlin") {
+    fmt.Println(group, key) // postcode 10115, postcode 10117, ...
+  }
+  for name, city := range mm.All() {
+    fmt.Println(name, city.Population)
+  }
+  mm.Delete("Berlin")
+  mm.Len() // 0
 }
 ```
 
-Benchmark results (`task gotb`):
+Benchmark results (`task tb`), measured on an Apple M5 Pro with Go 1.27.
 
 ```
 # => Non-Concurrent <=                            Iterations
-BenchmarkMultiKeyMapGet/size_100-12                  1430344        824.4 ns/         0 B/op        0 allocs/op
-BenchmarkMultiKeyMapGet/size_1000-12                   36643      33912 ns/op      2880 B/op      900 allocs/op
-BenchmarkMultiKeyMapGet/size_10000-12                   3036     390264 ns/op     38880 B/op     9900 allocs/op
-BenchmarkMultiKeyMapGet/size_100000-12                   261    4601110 ns/op    518882 B/op    99900 allocs/op
-                                                                                 
-BenchmarkMultiKeyMapPut/size_100-12                   888855       1412 ns/op         0 B/op        0 allocs/op
-BenchmarkMultiKeyMapPut/size_1000-12                   36153      33815 ns/op      2883 B/op      900 allocs/op
-BenchmarkMultiKeyMapPut/size_10000-12                   3026     394762 ns/op     39202 B/op     9900 allocs/op
-BenchmarkMultiKeyMapPut/size_100000-12                   248    4571614 ns/op    551453 B/op    99915 allocs/op
-                                                                                 
-BenchmarkMultiKeyMapRemove/size_100-12               2821974        425.8 ns/         0 B/op        0 allocs/op
-BenchmarkMultiKeyMapRemove/size_1000-12                78538      15281 ns/op      2880 B/op      900 allocs/op
-BenchmarkMultiKeyMapRemove/size_10000-12                6922     169382 ns/op     38880 B/op     9900 allocs/op
-BenchmarkMultiKeyMapRemove/size_100000-12                670    1764847 ns/op    518884 B/op    99900 allocs/op
-                                                                                 
-# => Concurrent <=                                Iterations                                                  
-BenchmarkConcurrentMultiKeyMapGet/size_100-12         735793       1578 ns/op         0 B/op        0 allocs/op
-BenchmarkConcurrentMultiKeyMapGet/size_1000-12         32385      37066 ns/op      2880 B/op      900 allocs/op
-BenchmarkConcurrentMultiKeyMapGet/size_10000-12         2756     433572 ns/op     38880 B/op     9900 allocs/op
-BenchmarkConcurrentMultiKeyMapGet/size_100000-12         240    4950545 ns/op    518883 B/op    99900 allocs/op
-                                                                                 
-BenchmarkConcurrentMultiKeyMapPut/size_100-12         454376       2609 ns/op         0 B/op        0 allocs/op
-BenchmarkConcurrentMultiKeyMapPut/size_1000-12         29721      40303 ns/op      2884 B/op      900 allocs/op
-BenchmarkConcurrentMultiKeyMapPut/size_10000-12         2592     459977 ns/op     39256 B/op     9900 allocs/op
-BenchmarkConcurrentMultiKeyMapPut/size_100000-12         224    5369616 ns/op    555038 B/op    99918 allocs/op
-                                                                                 
-BenchmarkConcurrentMultiKeyMapRemove/size_100-12      490444       2412 ns/op         0 B/op        0 allocs/op
-BenchmarkConcurrentMultiKeyMapRemove/size_1000-12      41236      29073 ns/op      2880 B/op      900 allocs/op
-BenchmarkConcurrentMultiKeyMapRemove/size_10000-12      4030     298559 ns/op     38880 B/op     9900 allocs/op
-BenchmarkConcurrentMultiKeyMapRemove/size_100000-12      400    2968791 ns/op    518884 B/op    99900 allocs/op
+BenchmarkMultiKeyMapGet/size_100-18                  2144828     585.1 ns/op       0 B/op      0 allocs/op
+BenchmarkMultiKeyMapGet/size_1000-18                   92668     12964 ns/op    2880 B/op    900 allocs/op
+BenchmarkMultiKeyMapGet/size_10000-18                   8082    149555 ns/op   38880 B/op   9900 allocs/op
+BenchmarkMultiKeyMapGet/size_100000-18                   631   1926035 ns/op  518884 B/op  99900 allocs/op
+
+BenchmarkMultiKeyMapSet/size_100-18                  1655570     643.0 ns/op       0 B/op      0 allocs/op
+BenchmarkMultiKeyMapSet/size_1000-18                   84871     13972 ns/op    2881 B/op    900 allocs/op
+BenchmarkMultiKeyMapSet/size_10000-18                   7207    162457 ns/op   39001 B/op   9900 allocs/op
+BenchmarkMultiKeyMapSet/size_100000-18                   483   2420619 ns/op  533354 B/op  99901 allocs/op
+
+BenchmarkMultiKeyMapDelete/size_100-18                 88156     13459 ns/op       0 B/op      0 allocs/op
+BenchmarkMultiKeyMapDelete/size_1000-18                 8210    150100 ns/op    2892 B/op    900 allocs/op
+BenchmarkMultiKeyMapDelete/size_10000-18                 709   1660875 ns/op   38943 B/op   9900 allocs/op
+BenchmarkMultiKeyMapDelete/size_100000-18                 57  20378743 ns/op  518885 B/op  99900 allocs/op
+
+# => Concurrent <=                                Iterations
+BenchmarkConcurrentMultiKeyMapGet/size_100-18        1563883     735.7 ns/op       0 B/op      0 allocs/op
+BenchmarkConcurrentMultiKeyMapGet/size_1000-18         80565     15050 ns/op    2880 B/op    900 allocs/op
+BenchmarkConcurrentMultiKeyMapGet/size_10000-18         7064    173346 ns/op   38881 B/op   9900 allocs/op
+BenchmarkConcurrentMultiKeyMapGet/size_100000-18         525   2318034 ns/op  518893 B/op  99900 allocs/op
+
+BenchmarkConcurrentMultiKeyMapSet/size_100-18        1000000      1297 ns/op       0 B/op      0 allocs/op
+BenchmarkConcurrentMultiKeyMapSet/size_1000-18         65265     18487 ns/op    2881 B/op    900 allocs/op
+BenchmarkConcurrentMultiKeyMapSet/size_10000-18         5636    218227 ns/op   39035 B/op   9900 allocs/op
+BenchmarkConcurrentMultiKeyMapSet/size_100000-18         385   3125797 ns/op  537037 B/op  99901 allocs/op
+
+BenchmarkConcurrentMultiKeyMapDelete/size_100-18       85387     13867 ns/op       0 B/op      0 allocs/op
+BenchmarkConcurrentMultiKeyMapDelete/size_1000-18       7920    165475 ns/op    2894 B/op    900 allocs/op
+BenchmarkConcurrentMultiKeyMapDelete/size_10000-18       705   1777658 ns/op   38934 B/op   9900 allocs/op
+BenchmarkConcurrentMultiKeyMapDelete/size_100000-18       58  20745164 ns/op  518880 B/op  99900 allocs/op
 ```
 
 ## BiKeyMap
@@ -85,57 +103,75 @@ You can use it like this:
 ```go
 package main
 
-import "github.com/aeimer/go-multikeymap/bikeymap"
+import (
+  "errors"
+  "fmt"
+
+  "github.com/aeimer/go-multikeymap/bikeymap"
+)
 
 func main() {
-	type City struct {
-		Name       string
-		Population int
-	}
-	// keyA: Cityname, keyB: Population
-	bm := bikeymap.New[string, int, City]()
-	// or: bm := bikeymap.NewConcurrent[string, int, City]()
-	_ = bm.Set("Berlin", 3_500_000, City{"Berlin", 3_500_000})
-	_ = bm.Set("Hamburg", 1_800_000, City{"Hamburg", 1_800_000})
-	bm.GetByKeyA("Berlin")  // City{"Berlin", 3_500_000}
-	bm.GetByKeyB(1_800_000) // City{"Hamburg", 1_800_000}
+  type City struct {
+    Name       string
+    Population int
+  }
+  // keyA: Cityname, keyB: Population
+  bm := bikeymap.New[string, int, City]()
+  // or: bm := bikeymap.NewConcurrent[string, int, City]()
+  // the zero value works too: var bm bikeymap.BiKeyMap[string, int, City]
+  _ = bm.Set("Berlin", 3_500_000, City{"Berlin", 3_500_000})
+  _ = bm.Set("Hamburg", 1_800_000, City{"Hamburg", 1_800_000})
+  bm.GetByKeyA("Berlin")  // City{"Berlin", 3_500_000}, true
+  bm.GetByKeyB(1_800_000) // City{"Hamburg", 1_800_000}, true
+  bm.KeyA(1_800_000)      // "Hamburg", true
+  bm.KeyB("Berlin")       // 3_500_000, true
+
+  // Both keys must stay unique.
+  err := bm.Set("Munich", 3_500_000, City{"Munich", 1_500_000})
+  errors.Is(err, bikeymap.ErrKeyBConflict) // true
+
+  for name := range bm.KeysA() {
+    fmt.Println(name)
+  }
+  bm.DeleteByKeyB(1_800_000)
+  bm.Len() // 1
 }
 ```
 
-Benchmark results (`task gotb`):
+Benchmark results (`task tb`), measured on an Apple M5 Pro with Go 1.27.
 
 ```
-# => Non-Concurrent <=                         Iterations
-BenchmarkBiKeyMapGet/size_100-12                   531668        2094 ns/op          0 B/op         0 allocs/op
-BenchmarkBiKeyMapGet/size_1000-12                   24627       49464 ns/op       2880 B/op       900 allocs/op
-BenchmarkBiKeyMapGet/size_10000-12                   1644      729522 ns/op      38880 B/op      9900 allocs/op
-BenchmarkBiKeyMapGet/size_100000-12                   139     8544642 ns/op     518882 B/op     99900 allocs/op
-                                                  
-BenchmarkBiKeyMapPut/size_100-12                   254956        4653 ns/op          0 B/op         0 allocs/op
-BenchmarkBiKeyMapPut/size_1000-12                   12880       92922 ns/op       5791 B/op      1800 allocs/op
-BenchmarkBiKeyMapPut/size_10000-12                    914     1289536 ns/op      81248 B/op     19800 allocs/op
-BenchmarkBiKeyMapPut/size_100000-12                    67    17404694 ns/op    1436872 B/op    199973 allocs/op
-                                                  
-BenchmarkBiKeyMapRemove/size_100-12               5802380       206.4 ns/op          0 B/op         0 allocs/op
-BenchmarkBiKeyMapRemove/size_1000-12               612367        1984 ns/op          0 B/op         0 allocs/op
-BenchmarkBiKeyMapRemove/size_10000-12               60577       19730 ns/op          0 B/op         0 allocs/op
-BenchmarkBiKeyMapRemove/size_100000-12               5990      199194 ns/op          0 B/op         0 allocs/op
-                                                  
-# => Concurrent <=                              Iterations               
-BenchmarkConcurrentBiKeyMapGet/size_100-12          325862        3638 ns/op          0 B/op         0 allocs/op
-BenchmarkConcurrentBiKeyMapGet/size_1000-12          19471       61879 ns/op       2880 B/op       900 allocs/op
-BenchmarkConcurrentBiKeyMapGet/size_10000-12          1428      832351 ns/op      38880 B/op      9900 allocs/op
-BenchmarkConcurrentBiKeyMapGet/size_100000-12          100    10026768 ns/op     518882 B/op     99900 allocs/op
-                                                  
-BenchmarkConcurrentBiKeyMapPut/size_100-12          207386        5683 ns/op          0 B/op         0 allocs/op
-BenchmarkConcurrentBiKeyMapPut/size_1000-12          12157       99885 ns/op       5793 B/op      1800 allocs/op
-BenchmarkConcurrentBiKeyMapPut/size_10000-12           870     1371878 ns/op      81438 B/op     19800 allocs/op
-BenchmarkConcurrentBiKeyMapPut/size_100000-12           62    19618138 ns/op    1469608 B/op    199989 allocs/op
-                                                  
-BenchmarkConcurrentBiKeyMapRemove/size_100-12       353018        3667 ns/op       1599 B/op        99 allocs/op
-BenchmarkConcurrentBiKeyMapRemove/size_1000-12       34488       34653 ns/op      15999 B/op       999 allocs/op
-BenchmarkConcurrentBiKeyMapRemove/size_10000-12       3363      364001 ns/op     159952 B/op      9997 allocs/op
-BenchmarkConcurrentBiKeyMapRemove/size_100000-12       320     3551128 ns/op    1595034 B/op     99687 allocs/op
+# => Non-Concurrent <=                        Iterations
+BenchmarkBiKeyMapGet/size_100-18                  727411     1660 ns/op        0 B/op       0 allocs/op
+BenchmarkBiKeyMapGet/size_1000-18                  56086    21153 ns/op     2880 B/op     900 allocs/op
+BenchmarkBiKeyMapGet/size_10000-18                  4726   255093 ns/op    38881 B/op    9900 allocs/op
+BenchmarkBiKeyMapGet/size_100000-18                  332  3743670 ns/op   518880 B/op   99900 allocs/op
+
+BenchmarkBiKeyMapSet/size_100-18                  605773     2130 ns/op        0 B/op       0 allocs/op
+BenchmarkBiKeyMapSet/size_1000-18                  35040    34782 ns/op     5768 B/op    1800 allocs/op
+BenchmarkBiKeyMapSet/size_10000-18                  3085   383540 ns/op    78552 B/op   19800 allocs/op
+BenchmarkBiKeyMapSet/size_100000-18                  238  5048236 ns/op  1120042 B/op  199804 allocs/op
+
+BenchmarkBiKeyMapDelete/size_100-18               220062     5450 ns/op        0 B/op       0 allocs/op
+BenchmarkBiKeyMapDelete/size_1000-18               22471    53713 ns/op        0 B/op       0 allocs/op
+BenchmarkBiKeyMapDelete/size_10000-18               2036   593179 ns/op        0 B/op       0 allocs/op
+BenchmarkBiKeyMapDelete/size_100000-18               147  8209722 ns/op        0 B/op       0 allocs/op
+
+# => Concurrent <=                            Iterations
+BenchmarkConcurrentBiKeyMapGet/size_100-18        619512     1985 ns/op        0 B/op       0 allocs/op
+BenchmarkConcurrentBiKeyMapGet/size_1000-18        44323    26994 ns/op     2880 B/op     900 allocs/op
+BenchmarkConcurrentBiKeyMapGet/size_10000-18        3844   313419 ns/op    38880 B/op    9900 allocs/op
+BenchmarkConcurrentBiKeyMapGet/size_100000-18        267  4440407 ns/op   518880 B/op   99900 allocs/op
+
+BenchmarkConcurrentBiKeyMapSet/size_100-18        451846     2459 ns/op        0 B/op       0 allocs/op
+BenchmarkConcurrentBiKeyMapSet/size_1000-18        30844    38602 ns/op     5769 B/op    1800 allocs/op
+BenchmarkConcurrentBiKeyMapSet/size_10000-18        2392   457005 ns/op    78781 B/op   19800 allocs/op
+BenchmarkConcurrentBiKeyMapSet/size_100000-18        199  5948356 ns/op  1136140 B/op  199805 allocs/op
+
+BenchmarkConcurrentBiKeyMapDelete/size_100-18     205885     5807 ns/op        0 B/op       0 allocs/op
+BenchmarkConcurrentBiKeyMapDelete/size_1000-18     20644    58138 ns/op        0 B/op       0 allocs/op
+BenchmarkConcurrentBiKeyMapDelete/size_10000-18     1902   639700 ns/op        0 B/op       0 allocs/op
+BenchmarkConcurrentBiKeyMapDelete/size_100000-18     141  8465134 ns/op        0 B/op       0 allocs/op
 ```
 
 ## Contribution
