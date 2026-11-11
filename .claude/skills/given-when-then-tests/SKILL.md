@@ -30,7 +30,7 @@ Keep a comment that explains a non-obvious why, and put it below the block comme
 func TestBiKeyMap_DeleteByKeyA(t *testing.T) {
 	// given
 	bm := New[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	bm.Set("keyA1", 1, "value1")
 
 	// when
 	bm.DeleteByKeyA("keyA1")
@@ -48,27 +48,29 @@ Name input fields `given…` and expected fields `want…` where that reads natu
 The blocks go inside the loop body or the `t.Run` closure.
 
 ```go
-func TestBiKeyMap_Set_Conflict(t *testing.T) {
+func TestBiKeyMap_Set_Overwrite(t *testing.T) {
 	tests := []struct {
 		name      string
 		givenKeyA string
 		givenKeyB int
-		wantErr   error
+		wantAll   map[string]string
 	}{
-		{"keyA taken", "keyA1", 2, ErrKeyAConflict},
-		{"keyB taken", "keyA2", 1, ErrKeyBConflict},
+		{"same pair", "keyA1", 1, map[string]string{"keyA1": "new", "keyA2": "value2"}},
+		{"keyA paired elsewhere", "keyA1", 3, map[string]string{"keyA1": "new", "keyA2": "value2"}},
+		{"both keys paired elsewhere", "keyA1", 2, map[string]string{"keyA1": "new"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// given
 			bm := New[string, int, string]()
-			require.NoError(t, bm.Set("keyA1", 1, "value1"))
+			bm.Set("keyA1", 1, "value1")
+			bm.Set("keyA2", 2, "value2")
 
 			// when
-			err := bm.Set(tt.givenKeyA, tt.givenKeyB, "value2")
+			bm.Set(tt.givenKeyA, tt.givenKeyB, "new")
 
 			// then
-			assert.ErrorIs(t, err, tt.wantErr)
+			assert.Equal(t, tt.wantAll, maps.Collect(bm.All()))
 		})
 	}
 }

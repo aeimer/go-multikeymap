@@ -1,7 +1,6 @@
 package bikeymap
 
 import (
-	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -13,12 +12,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func ExampleNewConcurrent() {
 	bm := NewConcurrent[string, int, string]()
-	_ = bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA1", 1, "value1")
 	value, exists := bm.GetByKeyA("keyA1")
 	fmt.Printf("[Key A] value: %v, exists: %v\n", value, exists)
 	value, exists = bm.GetByKeyB(1)
@@ -33,10 +31,9 @@ func TestConcurrentBiKeyMap_SetAndGet(t *testing.T) {
 	bm := NewConcurrent[string, int, string]()
 
 	// when
-	err := bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA1", 1, "value1")
 
 	// then
-	require.NoError(t, err)
 	value, exists := bm.GetByKeyA("keyA1")
 	if !exists || value != "value1" {
 		t.Errorf("expected value1, got %v", value)
@@ -47,45 +44,76 @@ func TestConcurrentBiKeyMap_SetAndGet(t *testing.T) {
 	}
 }
 
-func TestConcurrentBiKeyMap_SetDuplicateKeys(t *testing.T) {
-	// given
-	bm := NewConcurrent[string, int, string]()
-	err := bm.Set("keyA1", 1, "value1")
-	require.NoError(t, err)
+func TestConcurrentBiKeyMap_Set_Overwrite(t *testing.T) {
+	tests := []struct {
+		name      string
+		givenKeyA string
+		givenKeyB int
+		wantAll   map[string]string
+		wantPairs map[string]int
+	}{
+		{
+			name:      "new pair",
+			givenKeyA: "keyA3", givenKeyB: 3,
+			wantAll:   map[string]string{"keyA1": "value1", "keyA2": "value2", "keyA3": "new"},
+			wantPairs: map[string]int{"keyA1": 1, "keyA2": 2, "keyA3": 3},
+		},
+		{
+			name:      "same pair replaces the value",
+			givenKeyA: "keyA1", givenKeyB: 1,
+			wantAll:   map[string]string{"keyA1": "new", "keyA2": "value2"},
+			wantPairs: map[string]int{"keyA1": 1, "keyA2": 2},
+		},
+		{
+			name:      "keyA paired with another keyB",
+			givenKeyA: "keyA1", givenKeyB: 3,
+			wantAll:   map[string]string{"keyA1": "new", "keyA2": "value2"},
+			wantPairs: map[string]int{"keyA1": 3, "keyA2": 2},
+		},
+		{
+			name:      "keyB paired with another keyA",
+			givenKeyA: "keyA3", givenKeyB: 1,
+			wantAll:   map[string]string{"keyA2": "value2", "keyA3": "new"},
+			wantPairs: map[string]int{"keyA2": 2, "keyA3": 1},
+		},
+		{
+			name:      "both keys paired with others",
+			givenKeyA: "keyA1", givenKeyB: 2,
+			wantAll:   map[string]string{"keyA1": "new"},
+			wantPairs: map[string]int{"keyA1": 2},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// given
+			bm := NewConcurrent[string, int, string]()
+			bm.Set("keyA1", 1, "value1")
+			bm.Set("keyA2", 2, "value2")
 
-	// when
-	// keyB 1 is already paired with keyA1.
-	err = bm.Set("keyA2", 1, "value2")
+			// when
+			bm.Set(tt.givenKeyA, tt.givenKeyB, "new")
 
-	// then
-	require.ErrorIs(t, err, ErrKeyBConflict)
-	require.EqualError(t, err, "bikeymap: keyB is paired with a different keyA")
-
-	// when
-	// keyA1 is already paired with keyB 1.
-	err = bm.Set("keyA1", 2, "value2")
-
-	// then
-	require.ErrorIs(t, err, ErrKeyAConflict)
-	require.EqualError(t, err, "bikeymap: keyA is paired with a different keyB")
-
-	// given
-	require.NoError(t, bm.Set("keyA3", 3, "value3"))
-
-	// when
-	// Both keys conflict: the keyB conflict is reported.
-	err = bm.Set("keyA1", 3, "value4")
-
-	// then
-	require.ErrorIs(t, err, ErrKeyBConflict)
-	assert.Equal(t, map[string]string{"keyA1": "value1", "keyA3": "value3"}, maps.Collect(bm.All()))
+			// then
+			assert.Equal(t, tt.wantAll, maps.Collect(bm.All()))
+			assert.Equal(t, len(tt.wantAll), bm.Len())
+			for keyA, keyB := range tt.wantPairs {
+				gotKeyB, ok := bm.KeyB(keyA)
+				assert.True(t, ok)
+				assert.Equal(t, keyB, gotKeyB)
+				gotKeyA, ok := bm.KeyA(keyB)
+				assert.True(t, ok)
+				assert.Equal(t, keyA, gotKeyA)
+			}
+			// Both indexes hold exactly the same pairs.
+			assert.ElementsMatch(t, slices.Collect(maps.Values(tt.wantPairs)), slices.Collect(bm.KeysB()))
+		})
+	}
 }
 
 func TestConcurrentBiKeyMap_DeleteByKeyA(t *testing.T) {
 	// given
 	bm := NewConcurrent[string, int, string]()
-	err := bm.Set("keyA1", 1, "value1")
-	require.NoError(t, err)
+	bm.Set("keyA1", 1, "value1")
 
 	// when
 	bm.DeleteByKeyA("keyA1")
@@ -104,8 +132,7 @@ func TestConcurrentBiKeyMap_DeleteByKeyA(t *testing.T) {
 func TestConcurrentBiKeyMap_DeleteByKeyB(t *testing.T) {
 	// given
 	bm := NewConcurrent[string, int, string]()
-	err := bm.Set("keyA1", 1, "value1")
-	require.NoError(t, err)
+	bm.Set("keyA1", 1, "value1")
 
 	// when
 	bm.DeleteByKeyB(1)
@@ -124,7 +151,7 @@ func TestConcurrentBiKeyMap_DeleteByKeyB(t *testing.T) {
 func TestConcurrentBiKeyMap_String(t *testing.T) {
 	// given
 	bm := NewConcurrent[string, int, string]()
-	_ = bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA1", 1, "value1")
 	expected := "ConcurrentBiKeyMap: map[keyA1:value1]"
 
 	// when / then
@@ -136,7 +163,7 @@ func TestConcurrentBiKeyMap_String(t *testing.T) {
 func TestConcurrentBiKeyMap_DeleteByKeyA_NotFound(t *testing.T) {
 	// given
 	bm := NewConcurrent[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	bm.Set("keyA1", 1, "value1")
 
 	// when
 	bm.DeleteByKeyA("nonExistentKey")
@@ -148,7 +175,7 @@ func TestConcurrentBiKeyMap_DeleteByKeyA_NotFound(t *testing.T) {
 func TestConcurrentBiKeyMap_DeleteByKeyB_NotFound(t *testing.T) {
 	// given
 	bm := NewConcurrent[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	bm.Set("keyA1", 1, "value1")
 
 	// when
 	bm.DeleteByKeyB(999)
@@ -165,7 +192,7 @@ func TestConcurrentBiKeyMap_Len(t *testing.T) {
 	assert.Equal(t, 0, bm.Len())
 
 	// when
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	bm.Set("keyA1", 1, "value1")
 
 	// then
 	assert.Equal(t, 1, bm.Len())
@@ -174,8 +201,8 @@ func TestConcurrentBiKeyMap_Len(t *testing.T) {
 func TestConcurrentBiKeyMap_Clear(t *testing.T) {
 	// given
 	bm := NewConcurrent[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
 
 	// when
 	bm.Clear()
@@ -187,8 +214,8 @@ func TestConcurrentBiKeyMap_Clear(t *testing.T) {
 func TestConcurrentBiKeyMap_Values(t *testing.T) {
 	// given
 	bm := NewConcurrent[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
 
 	// when / then
 	assert.ElementsMatch(t, []string{"value1", "value2"}, slices.Collect(bm.Values()))
@@ -197,8 +224,8 @@ func TestConcurrentBiKeyMap_Values(t *testing.T) {
 func TestConcurrentBiKeyMap_ValuesStopsEarly(t *testing.T) {
 	// given
 	bm := NewConcurrent[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
 
 	// when
 	count := 0
@@ -214,15 +241,15 @@ func TestConcurrentBiKeyMap_ValuesStopsEarly(t *testing.T) {
 func TestConcurrentBiKeyMap_ValuesAllowsWritesInLoop(t *testing.T) {
 	// given
 	bm := NewConcurrent[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
 	keyB := 100
 
 	// when
 	for v := range bm.Values() {
 		bm.DeleteByKeyA("keyA" + strings.TrimPrefix(v, "value"))
 		keyB++
-		require.NoError(t, bm.Set("new"+v, keyB, v))
+		bm.Set("new"+v, keyB, v)
 	}
 
 	// then
@@ -234,8 +261,8 @@ func TestConcurrentBiKeyMap_ValuesAllowsWritesInLoop(t *testing.T) {
 func TestConcurrentBiKeyMap_All(t *testing.T) {
 	// given
 	bm := NewConcurrent[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
 
 	// when / then
 	assert.Equal(t, map[string]string{"keyA1": "value1", "keyA2": "value2"}, maps.Collect(bm.All()))
@@ -244,8 +271,8 @@ func TestConcurrentBiKeyMap_All(t *testing.T) {
 func TestConcurrentBiKeyMap_Keys(t *testing.T) {
 	// given
 	bm := NewConcurrent[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
 
 	// when / then
 	assert.ElementsMatch(t, []string{"keyA1", "keyA2"}, slices.Collect(bm.KeysA()))
@@ -255,8 +282,8 @@ func TestConcurrentBiKeyMap_Keys(t *testing.T) {
 func TestConcurrentBiKeyMap_IteratorsStopEarly(t *testing.T) {
 	// given
 	bm := NewConcurrent[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
 
 	// when
 	count := 0
@@ -280,30 +307,28 @@ func TestConcurrentBiKeyMap_IteratorsStopEarly(t *testing.T) {
 func TestConcurrentBiKeyMap_IteratorsAllowWritesInLoop(t *testing.T) {
 	// given
 	bm := NewConcurrent[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	var errs []error
+	bm.Set("keyA1", 1, "value1")
 
 	// when
 	requireNoDeadlock(t, func() {
 		for keyA, v := range bm.All() {
 			bm.DeleteByKeyA(keyA)
-			errs = append(errs, bm.Set("all", 2, v))
+			bm.Set("all", 2, v)
 		}
 		for keyA := range bm.KeysA() {
 			bm.DeleteByKeyA(keyA)
-			errs = append(errs, bm.Set("keysA", 3, "value3"))
+			bm.Set("keysA", 3, "value3")
 		}
 		for keyB := range bm.KeysB() {
 			bm.DeleteByKeyB(keyB)
-			errs = append(errs, bm.Set("keysB", 4, "value4"))
+			bm.Set("keysB", 4, "value4")
 		}
 		for v := range bm.Values() {
-			errs = append(errs, bm.Set("keysB", 4, v+"!"))
+			bm.Set("keysB", 4, v+"!")
 		}
 	})
 
 	// then
-	require.NoError(t, errors.Join(errs...))
 	assert.Equal(t, map[string]string{"keysB": "value4!"}, maps.Collect(bm.All()))
 }
 
@@ -325,7 +350,7 @@ func requireNoDeadlock(t *testing.T, f func()) {
 func TestConcurrentBiKeyMap_KeyAAndKeyB(t *testing.T) {
 	// given
 	bm := NewConcurrent[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	bm.Set("keyA1", 1, "value1")
 
 	// when
 	keyA, ok := bm.KeyA(1)
@@ -393,7 +418,7 @@ func TestConcurrentBiKeyMap_LenDuringSet(t *testing.T) {
 	// when
 	for i := range numGoroutines {
 		wg.Go(func() {
-			assert.NoError(t, bm.Set(strconv.Itoa(i), i, "value"))
+			bm.Set(strconv.Itoa(i), i, "value")
 		})
 		wg.Go(func() {
 			_ = bm.Len()
@@ -411,9 +436,7 @@ func concurrentSet(t *testing.T, i int, wg *sync.WaitGroup, bm *ConcurrentBiKeyM
 	keyA := fmt.Sprintf("keyA%d", i)
 	keyB := i
 	value := fmt.Sprintf("value%d", i)
-	if err := bm.Set(keyA, keyB, value); err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
+	bm.Set(keyA, keyB, value)
 }
 
 func concurrentGet(t *testing.T, i int, wg *sync.WaitGroup, bm *ConcurrentBiKeyMap[string, int, string]) {
@@ -470,7 +493,7 @@ func TestConcurrentBiKeyMap_ZeroValueWrites(t *testing.T) {
 	var bm ConcurrentBiKeyMap[string, int, string]
 
 	// when
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	bm.Set("keyA1", 1, "value1")
 
 	// then
 	value, ok := bm.GetByKeyB(1)
@@ -479,7 +502,7 @@ func TestConcurrentBiKeyMap_ZeroValueWrites(t *testing.T) {
 
 	// when
 	bm.Clear()
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA2", 2, "value2")
 
 	// then
 	assert.Equal(t, 1, bm.Len())
@@ -496,8 +519,8 @@ func TestConcurrentBiKeyMap_LoadAndDeleteByKeyA(t *testing.T) {
 	assert.False(t, loaded)
 
 	// given
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
 
 	// when
 	value, loaded := bm.LoadAndDeleteByKeyA("keyA1")
@@ -527,8 +550,8 @@ func TestConcurrentBiKeyMap_LoadAndDeleteByKeyB(t *testing.T) {
 	assert.False(t, loaded)
 
 	// given
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
 
 	// when
 	value, loaded := bm.LoadAndDeleteByKeyB(1)
@@ -550,8 +573,8 @@ func TestConcurrentBiKeyMap_LoadAndDeleteByKeyB(t *testing.T) {
 func TestConcurrentBiKeyMap_LoadAndDeleteLoadsOnce(t *testing.T) {
 	// given
 	var bm ConcurrentBiKeyMap[string, int, string]
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
 	var wg sync.WaitGroup
 	var loadedA, loadedB atomic.Int32
 
@@ -579,8 +602,8 @@ func TestConcurrentBiKeyMap_LoadAndDeleteLoadsOnce(t *testing.T) {
 func TestConcurrentBiKeyMap_Clone(t *testing.T) {
 	// given
 	bm := NewConcurrent[string, int, string]()
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
-	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
 
 	// when
 	clone := bm.Clone()
@@ -590,10 +613,10 @@ func TestConcurrentBiKeyMap_Clone(t *testing.T) {
 
 	// when
 	// Changes to the clone and to the original stay apart.
-	require.NoError(t, clone.Set("keyA1", 1, "changed"))
-	require.NoError(t, clone.Set("keyA3", 3, "value3"))
+	clone.Set("keyA1", 1, "changed")
+	clone.Set("keyA3", 3, "value3")
 	clone.DeleteByKeyB(2)
-	require.NoError(t, bm.Set("keyA4", 4, "value4"))
+	bm.Set("keyA4", 4, "value4")
 
 	// then
 	assert.Equal(t, map[string]string{"keyA1": "value1", "keyA2": "value2", "keyA4": "value4"}, maps.Collect(bm.All()))
@@ -606,7 +629,7 @@ func TestConcurrentBiKeyMap_CloneCopiesValuesShallowly(t *testing.T) {
 	// given
 	bm := NewConcurrent[string, int, *int]()
 	value := 1
-	require.NoError(t, bm.Set("keyA1", 1, &value))
+	bm.Set("keyA1", 1, &value)
 
 	// when
 	clone := bm.Clone()
@@ -627,7 +650,7 @@ func TestConcurrentBiKeyMap_CloneZeroValue(t *testing.T) {
 	assert.Equal(t, 0, clone.Len())
 
 	// when
-	require.NoError(t, clone.Set("keyA1", 1, "value1"))
+	clone.Set("keyA1", 1, "value1")
 
 	// then
 	assert.Equal(t, 0, bm.Len())
@@ -637,7 +660,7 @@ func TestConcurrentBiKeyMap_DeleteFunc(t *testing.T) {
 	// given
 	bm := NewConcurrent[string, int, string]()
 	for i := range 4 {
-		require.NoError(t, bm.Set("keyA"+strconv.Itoa(i), i, "value"+strconv.Itoa(i)))
+		bm.Set("keyA"+strconv.Itoa(i), i, "value"+strconv.Itoa(i))
 	}
 
 	// when
@@ -666,13 +689,13 @@ func TestConcurrentBiKeyMap_DeleteFuncZeroValue(t *testing.T) {
 func TestConcurrentBiKeyMap_CloneHasOwnLock(t *testing.T) {
 	// given
 	var bm ConcurrentBiKeyMap[string, int, string]
-	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	bm.Set("keyA1", 1, "value1")
 	clone := bm.Clone()
 
 	// when
 	requireNoDeadlock(t, func() {
 		bm.DeleteFunc(func(string, int, string) bool {
-			assert.NoError(t, clone.Set("keyA2", 2, "value2"))
+			clone.Set("keyA2", 2, "value2")
 			return false
 		})
 	})
@@ -698,7 +721,7 @@ func BenchmarkConcurrentBiKeyMapGet(b *testing.B) {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
 			m := NewConcurrent[string, int, string]()
 			for n := range v.size {
-				_ = m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
+				m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
 			}
 			b.ResetTimer()
 			for range b.N {
@@ -718,7 +741,7 @@ func BenchmarkConcurrentBiKeyMapSet(b *testing.B) {
 			b.ResetTimer()
 			for range b.N {
 				for n := range v.size {
-					_ = m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
+					m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
 				}
 			}
 		})
@@ -733,7 +756,7 @@ func BenchmarkConcurrentBiKeyMapDelete(b *testing.B) {
 				// Refill outside the timer so that every iteration deletes existing keys.
 				b.StopTimer()
 				for n := range v.size {
-					_ = m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
+					m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
 				}
 				b.StartTimer()
 				for n := range v.size {
@@ -751,7 +774,7 @@ type reentrantValue struct {
 }
 
 func (v reentrantValue) String() string {
-	go func() { _ = v.m.Set("writer", 2, reentrantValue{}) }()
+	go v.m.Set("writer", 2, reentrantValue{})
 	// Give the writer time to block on the lock, if String holds it.
 	time.Sleep(20 * time.Millisecond)
 	return strconv.Itoa(v.m.Len())
@@ -760,7 +783,7 @@ func (v reentrantValue) String() string {
 func TestConcurrentBiKeyMap_String_ValueCallsBack(t *testing.T) {
 	// given
 	bm := NewConcurrent[string, int, reentrantValue]()
-	require.NoError(t, bm.Set("self", 1, reentrantValue{m: bm}))
+	bm.Set("self", 1, reentrantValue{m: bm})
 
 	// when
 	done := make(chan string)
