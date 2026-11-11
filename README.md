@@ -24,7 +24,7 @@ The access is O(1+1+1) => O(1) due to the underlying hashmap.
   ```
 
 * **BiKeyMap** is a stricter version of MultiKeyMap.
-It has KeyA and KeyB, both need to be unique.
+It has keyA and keyB, both need to be unique.
 The access is O(1+1) => O(1) due to the underlying hashmap.
 
   ```go
