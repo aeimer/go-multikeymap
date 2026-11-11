@@ -215,11 +215,14 @@ func (c *ConcurrentMultiKeyMap[K, V]) Clone() *ConcurrentMultiKeyMap[K, V] {
 	return &ConcurrentMultiKeyMap[K, V]{m: *c.m.Clone()}
 }
 
-// Clear removes all elements from the map.
+// Clear removes all elements from the map and releases their memory.
+// Iterations that are running are not affected, because they work on a snapshot.
 func (c *ConcurrentMultiKeyMap[K, V]) Clear() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.m.Clear()
+	// Reset instead of clear: the iterators work on snapshots, so clearing
+	// in place would only cost time under the lock and keep the memory.
+	c.m = MultiKeyMap[K, V]{}
 }
 
 // String returns a string representation of the map.

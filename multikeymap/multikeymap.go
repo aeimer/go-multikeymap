@@ -327,8 +327,25 @@ func (m *MultiKeyMap[K, V]) Clone() *MultiKeyMap[K, V] {
 }
 
 // Clear removes all elements from the map.
+// Like clear on a Go map, it keeps the allocated memory,
+// and an iteration that is running yields no further entries.
 func (m *MultiKeyMap[K, V]) Clear() {
-	*m = MultiKeyMap[K, V]{}
+	// clear instead of resetting the struct: a running range keeps the old
+	// maps and would go on yielding their entries.
+	// The nested maps are cleared first, because an iterator such as
+	// SecondaryKeys may already range over one of them.
+	for _, groups := range m.secondaryTo {
+		for _, keys := range groups {
+			clear(keys)
+		}
+		clear(groups)
+	}
+	for _, keys := range m.secondary {
+		clear(keys)
+	}
+	clear(m.primary)
+	clear(m.secondary)
+	clear(m.secondaryTo)
 }
 
 // String returns a string representation of the map.
