@@ -192,6 +192,68 @@ BenchmarkConcurrentBiKeyMapDelete/size_10000-18     1902   639700 ns/op        0
 BenchmarkConcurrentBiKeyMapDelete/size_100000-18     141  8465134 ns/op        0 B/op       0 allocs/op
 ```
 
+## How it works
+
+Both maps store each value once.
+The other keys point to the key that holds the value, so a lookup costs one or two hash map accesses.
+
+### MultiKeyMap
+
+Three Go maps, shown with the example data from above:
+
+```mermaid
+flowchart LR
+  subgraph secondary["secondary: group → key → primary key"]
+    s1["postcode / 10115"]
+    s2["postcode / 10117"]
+  end
+  subgraph primary["primary: primary key → value"]
+    p1["Berlin"]
+  end
+  subgraph secondaryTo["secondaryTo: primary key → group → keys"]
+    r1["Berlin → postcode → {10115, 10117}"]
+  end
+  v1(["City{Berlin, 3_500_000}"])
+
+  s1 --> p1
+  s2 --> p1
+  p1 --> v1
+  r1 -. "used by Delete" .-> s1
+  r1 -.-> s2
+```
+
+- `Get` reads `primary`.
+- `GetBySecondaryKey` reads `secondary`, then `primary`.
+- `secondaryTo` is the reverse index: `Delete` uses it to remove all secondary keys of a primary key without scanning every group.
+
+### BiKeyMap
+
+Two Go maps:
+
+```mermaid
+flowchart LR
+  subgraph byKeyB["byKeyB: keyB → keyA"]
+    b1["3_500_000"]
+  end
+  subgraph byKeyA["byKeyA: keyA → entry"]
+    a1["Berlin"]
+  end
+  e1(["entry{keyB: 3_500_000, value: City{Berlin, 3_500_000}}"])
+
+  b1 --> a1
+  a1 --> e1
+```
+
+- `GetByKeyA` reads `byKeyA`.
+- `GetByKeyB` reads `byKeyB`, then `byKeyA`.
+- The entry stores keyB next to the value, so `DeleteByKeyA` finds keyB without a third map.
+
+### Concurrent variants
+
+`ConcurrentMultiKeyMap` and `ConcurrentBiKeyMap` wrap the plain type and a `sync.RWMutex`.
+Reads take the read lock, writes take the write lock, and each method then calls the plain method.
+Iterators copy the data under the read lock when the range starts and iterate over that snapshot.
+
 ## Contribution
 
 Feel free to contribute by opening issues or pull requests.
