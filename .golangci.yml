@@ -117,7 +117,7 @@ linters:
     - gomoddirectives
     # Allow and block list linter for direct Go module dependencies. This is different from depguard where there are different block types for example version constraints and module recommendations.
     # https://github.com/ryancurrah/gomodguard
-    - gomodguard
+    - gomodguard_v2
     # Checks that printf-like functions are named with f at the end
     # https://github.com/jirfag/go-printf-func-name
     - goprintffuncname
