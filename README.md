@@ -16,9 +16,23 @@ The secondary keys are mapping to the primary key.
 Therefore, the memory consumption is a bit higher than a native map.
 The access is O(1+1+1) => O(1) due to the underlying hashmap.
 
+  ```go
+  m := multikeymap.New[string, int]()
+  m.Set("Berlin", 3_500_000)
+  m.AddSecondaryKeys("Berlin", "postcode", "10115", "10117")
+  m.GetBySecondaryKey("postcode", "10117") // 3_500_000, true
+  ```
+
 * **BiKeyMap** is a stricter version of MultiKeyMap.
 It has KeyA and KeyB, both need to be unique.
 The access is O(1+1) => O(1) due to the underlying hashmap.
+
+  ```go
+  m := bikeymap.New[string, int, string]() // keyA: city, keyB: postcode
+  _ = m.Set("Berlin", 10115, "capital")
+  m.GetByKeyA("Berlin") // "capital", true
+  m.GetByKeyB(10115)    // "capital", true
+  ```
 
 ## MultiKeyMap
 
