@@ -5,7 +5,9 @@ import (
 )
 
 // MultiKeyMap is a generic in-memory map with a primary key and multiple secondary keys.
+// Secondary keys are strings, organised in named groups.
 // It implements container/Container.
+// A MultiKeyMap is not safe for concurrent use; use ConcurrentMultiKeyMap instead.
 type MultiKeyMap[K comparable, V any] struct {
 	primary     map[K]V
 	secondary   map[string]map[string]K              // Group -> SecondaryKey -> PrimaryKey
@@ -27,6 +29,9 @@ func (m *MultiKeyMap[K, V]) Put(primaryKey K, value V) {
 }
 
 // PutSecondaryKeys adds secondary keys under a group for a primary key.
+// It reports false and changes nothing if the primary key does not exist.
+// A secondary key that already belongs to another primary key in the same group
+// moves to primaryKey; the other primary key loses it.
 func (m *MultiKeyMap[K, V]) PutSecondaryKeys(primaryKey K, group string, keys ...string) bool {
 	if _, exists := m.primary[primaryKey]; !exists {
 		return false
@@ -83,9 +88,10 @@ func (m *MultiKeyMap[K, V]) HasSecondaryKey(group string, key string) bool {
 	return false
 }
 
-// GetAllKeyGroups returns all key groups and their secondary keys.
+// GetAllKeyGroups returns a copy of all key groups,
+// mapping group to secondary key to primary key.
+// Changes to the result do not affect the map.
 func (m *MultiKeyMap[K, V]) GetAllKeyGroups() map[string]map[string]K {
-	// Create a copy of the key groups to avoid concurrency issues
 	result := make(map[string]map[string]K)
 	for group, keys := range m.secondary {
 		result[group] = make(map[string]K)
@@ -120,7 +126,8 @@ func (m *MultiKeyMap[K, V]) Get(primaryKey K) (V, bool) {
 	return value, exists
 }
 
-// GetBySecondaryKey returns a primary key by secondary key and group.
+// GetBySecondaryKey returns the value of the primary key that the secondary key
+// in group points to. The bool reports whether such a value exists.
 func (m *MultiKeyMap[K, V]) GetBySecondaryKey(group string, key string) (V, bool) {
 	if groupKeys, exists := m.secondary[group]; exists {
 		primaryKey, exists := groupKeys[key]

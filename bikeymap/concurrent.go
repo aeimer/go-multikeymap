@@ -18,7 +18,9 @@ func NewConcurrent[KeyA comparable, KeyB comparable, V any]() *ConcurrentBiKeyMa
 	return &ConcurrentBiKeyMap[KeyA, KeyB, V]{m: *New[KeyA, KeyB, V]()}
 }
 
-// Put stores a value with two keys. It only fails if one of the keys is already set without the other.
+// Put stores a value with two keys.
+// It returns an error and changes nothing if keyA or keyB is already paired with a different key.
+// If both keys are already paired with each other, Put replaces the value.
 func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Put(keyA KeyA, keyB KeyB, value V) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -40,6 +42,7 @@ func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) GetByKeyB(keyB KeyB) (V, bool) {
 }
 
 // RemoveByKeyA removes a value using the first key, ensuring the corresponding second key is also deleted.
+// It returns an error if keyA does not exist.
 func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) RemoveByKeyA(keyA KeyA) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -47,6 +50,7 @@ func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) RemoveByKeyA(keyA KeyA) error {
 }
 
 // RemoveByKeyB removes a value using the second key, ensuring the corresponding first key is also deleted.
+// It returns an error if keyB does not exist.
 func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) RemoveByKeyB(keyB KeyB) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()

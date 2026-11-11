@@ -26,6 +26,9 @@ func (c *ConcurrentMultiKeyMap[K, V]) Put(primaryKey K, value V) {
 }
 
 // PutSecondaryKeys adds secondary keys under a group for a primary key.
+// It reports false and changes nothing if the primary key does not exist.
+// A secondary key that already belongs to another primary key in the same group
+// moves to primaryKey; the other primary key loses it.
 func (c *ConcurrentMultiKeyMap[K, V]) PutSecondaryKeys(primaryKey K, group string, keys ...string) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -46,7 +49,9 @@ func (c *ConcurrentMultiKeyMap[K, V]) HasSecondaryKey(group string, key string) 
 	return c.m.HasSecondaryKey(group, key)
 }
 
-// GetAllKeyGroups returns all key groups and their secondary keys.
+// GetAllKeyGroups returns a copy of all key groups,
+// mapping group to secondary key to primary key.
+// Changes to the result do not affect the map.
 func (c *ConcurrentMultiKeyMap[K, V]) GetAllKeyGroups() map[string]map[string]K {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -67,7 +72,8 @@ func (c *ConcurrentMultiKeyMap[K, V]) Get(primaryKey K) (V, bool) {
 	return c.m.Get(primaryKey)
 }
 
-// GetBySecondaryKey returns a primary key by secondary key and group.
+// GetBySecondaryKey returns the value of the primary key that the secondary key
+// in group points to. The bool reports whether such a value exists.
 func (c *ConcurrentMultiKeyMap[K, V]) GetBySecondaryKey(group string, key string) (V, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
