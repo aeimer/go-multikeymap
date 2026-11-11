@@ -55,6 +55,24 @@ func (c *ConcurrentMultiKeyMap[K, V]) HasSecondaryKey(group string, key string) 
 	return c.m.HasSecondaryKey(group, key)
 }
 
+// PrimaryKey returns the primary key that the secondary key in group points to.
+// The bool reports whether the secondary key exists.
+func (c *ConcurrentMultiKeyMap[K, V]) PrimaryKey(group string, key string) (K, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.m.PrimaryKey(group, key)
+}
+
+// SecondaryKeys returns an iterator over the secondary keys of primaryKey
+// as pairs of group and key.
+// If primaryKey has no secondary keys, the iterator yields nothing.
+// The iteration order is unspecified, like for a Go map.
+// Each iteration sees a snapshot taken when it starts and holds no lock while it runs,
+// so the loop body may modify the map.
+func (c *ConcurrentMultiKeyMap[K, V]) SecondaryKeys(primaryKey K) iter.Seq2[string, string] {
+	return snapshot2(&c.mu, func() iter.Seq2[string, string] { return c.m.SecondaryKeys(primaryKey) })
+}
+
 // KeyGroups returns a copy of all key groups,
 // mapping group to secondary key to primary key.
 // Changes to the result do not affect the map.

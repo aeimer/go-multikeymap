@@ -63,6 +63,20 @@ func (m *BiKeyMap[KeyA, KeyB, V]) GetByKeyB(keyB KeyB) (V, bool) {
 	return value, exists
 }
 
+// KeyA returns the keyA paired with keyB.
+// The bool reports whether keyB exists.
+func (m *BiKeyMap[KeyA, KeyB, V]) KeyA(keyB KeyB) (KeyA, bool) {
+	keyA, exists := m.keyAByKeyB[keyB]
+	return keyA, exists
+}
+
+// KeyB returns the keyB paired with keyA.
+// The bool reports whether keyA exists.
+func (m *BiKeyMap[KeyA, KeyB, V]) KeyB(keyA KeyA) (KeyB, bool) {
+	keyB, exists := m.keyBByKeyA[keyA]
+	return keyB, exists
+}
+
 // DeleteByKeyA removes the value stored under keyA and the paired keyB.
 // If keyA does not exist, DeleteByKeyA is a no-op.
 func (m *BiKeyMap[KeyA, KeyB, V]) DeleteByKeyA(keyA KeyA) {

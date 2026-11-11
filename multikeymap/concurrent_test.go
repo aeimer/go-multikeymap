@@ -231,6 +231,66 @@ func requireNoDeadlock(t *testing.T, f func()) {
 	}
 }
 
+func TestConcurrentMultiKeyMap_PrimaryKey(t *testing.T) {
+	mm := NewConcurrent[string, int]()
+	mm.Set("key1", 1)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1")
+
+	pk, ok := mm.PrimaryKey("group1", "secKey1")
+	assert.True(t, ok)
+	assert.Equal(t, "key1", pk)
+
+	pk, ok = mm.PrimaryKey("group1", "missing")
+	assert.False(t, ok)
+	assert.Empty(t, pk)
+	_, ok = mm.PrimaryKey("missing", "secKey1")
+	assert.False(t, ok)
+}
+
+func TestConcurrentMultiKeyMap_SecondaryKeys(t *testing.T) {
+	mm := NewConcurrent[string, int]()
+	mm.Set("key1", 1)
+	mm.Set("key2", 2)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1", "secKey2")
+	mm.AddSecondaryKeys("key1", "group2", "secKey3")
+	mm.AddSecondaryKeys("key2", "group1", "secKey4")
+
+	type groupKey struct{ group, key string }
+	var got []groupKey
+	for group, key := range mm.SecondaryKeys("key1") {
+		got = append(got, groupKey{group, key})
+	}
+	assert.ElementsMatch(t, []groupKey{{"group1", "secKey1"}, {"group1", "secKey2"}, {"group2", "secKey3"}}, got)
+	for group, key := range mm.SecondaryKeys("missing") {
+		t.Errorf("unexpected secondary key %s/%s", group, key)
+	}
+}
+
+func TestConcurrentMultiKeyMap_SecondaryKeysStopsEarly(t *testing.T) {
+	mm := NewConcurrent[string, int]()
+	mm.Set("key1", 1)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1", "secKey2")
+	mm.AddSecondaryKeys("key1", "group2", "secKey3")
+	count := 0
+	for range mm.SecondaryKeys("key1") {
+		count++
+		break
+	}
+	assert.Equal(t, 1, count)
+}
+
+func TestConcurrentMultiKeyMap_SecondaryKeysAllowsWritesInLoop(t *testing.T) {
+	mm := NewConcurrent[string, int]()
+	mm.Set("key1", 1)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1", "secKey2")
+	requireNoDeadlock(t, func() {
+		for group, key := range mm.SecondaryKeys("key1") {
+			mm.AddSecondaryKeys("key1", group, "new"+key)
+		}
+	})
+	assert.Len(t, mm.KeyGroups()["group1"], 4)
+}
+
 func TestConcurrentMultiKeyMap_ConcurrentAccess(t *testing.T) {
 	mm := NewConcurrent[string, int]()
 	var wg sync.WaitGroup
