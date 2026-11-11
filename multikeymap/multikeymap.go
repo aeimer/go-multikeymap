@@ -8,8 +8,8 @@ import (
 // It implements container/Container.
 type MultiKeyMap[K comparable, V any] struct {
 	primary     map[K]V
-	secondary   map[string]map[string]K // Group -> SecondaryKey -> PrimaryKey
-	secondaryTo map[K]map[string]string // PrimaryKey -> Group -> SecondaryKey
+	secondary   map[string]map[string]K              // Group -> SecondaryKey -> PrimaryKey
+	secondaryTo map[K]map[string]map[string]struct{} // PrimaryKey -> Group -> set of SecondaryKeys
 }
 
 // New creates a new MultiKeyMap instance.
@@ -17,7 +17,7 @@ func New[K comparable, V any]() *MultiKeyMap[K, V] {
 	return &MultiKeyMap[K, V]{
 		primary:     make(map[K]V),
 		secondary:   make(map[string]map[string]K),
-		secondaryTo: make(map[K]map[string]string),
+		secondaryTo: make(map[K]map[string]map[string]struct{}),
 	}
 }
 
@@ -28,15 +28,39 @@ func (m *MultiKeyMap[K, V]) Put(primaryKey K, value V) {
 
 // PutSecondaryKeys adds secondary keys under a group for a primary key.
 func (m *MultiKeyMap[K, V]) PutSecondaryKeys(primaryKey K, group string, keys ...string) {
+	if len(keys) == 0 {
+		return
+	}
 	if m.secondary[group] == nil {
 		m.secondary[group] = make(map[string]K)
 	}
-	if m.secondaryTo[primaryKey] == nil {
-		m.secondaryTo[primaryKey] = make(map[string]string)
+	groups := m.secondaryTo[primaryKey]
+	if groups == nil {
+		groups = make(map[string]map[string]struct{})
+		m.secondaryTo[primaryKey] = groups
+	}
+	if groups[group] == nil {
+		groups[group] = make(map[string]struct{})
 	}
 	for _, key := range keys {
+		if owner, exists := m.secondary[group][key]; exists && owner != primaryKey {
+			m.removeReverseEntry(owner, group, key)
+		}
 		m.secondary[group][key] = primaryKey
-		m.secondaryTo[primaryKey][group] = key
+		groups[group][key] = struct{}{}
+	}
+}
+
+// removeReverseEntry drops key from the reverse index of primaryKey
+// and removes the group and primary key entries that become empty.
+func (m *MultiKeyMap[K, V]) removeReverseEntry(primaryKey K, group string, key string) {
+	groups := m.secondaryTo[primaryKey]
+	delete(groups[group], key)
+	if len(groups[group]) == 0 {
+		delete(groups, group)
+	}
+	if len(groups) == 0 {
+		delete(m.secondaryTo, primaryKey)
 	}
 }
 
@@ -71,15 +95,19 @@ func (m *MultiKeyMap[K, V]) GetAllKeyGroups() map[string]map[string]K {
 // Remove removes a primary key and its associated secondary keys.
 func (m *MultiKeyMap[K, V]) Remove(primaryKey K) {
 	delete(m.primary, primaryKey)
-	if groups, exists := m.secondaryTo[primaryKey]; exists {
-		for group, key := range groups {
-			delete(m.secondary[group], key)
-			if len(m.secondary[group]) == 0 {
-				delete(m.secondary, group)
-			}
-		}
-		delete(m.secondaryTo, primaryKey)
+	groups, exists := m.secondaryTo[primaryKey]
+	if !exists {
+		return
 	}
+	for group, keys := range groups {
+		for key := range keys {
+			delete(m.secondary[group], key)
+		}
+		if len(m.secondary[group]) == 0 {
+			delete(m.secondary, group)
+		}
+	}
+	delete(m.secondaryTo, primaryKey)
 }
 
 // Get returns a value by primary key.
@@ -123,7 +151,7 @@ func (m *MultiKeyMap[K, V]) Values() []V {
 func (m *MultiKeyMap[K, V]) Clear() {
 	m.primary = make(map[K]V)
 	m.secondary = make(map[string]map[string]K)
-	m.secondaryTo = make(map[K]map[string]string)
+	m.secondaryTo = make(map[K]map[string]map[string]struct{})
 }
 
 // String returns a string representation of the map.
