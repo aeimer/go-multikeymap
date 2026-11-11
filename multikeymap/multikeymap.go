@@ -125,18 +125,30 @@ func (m *MultiKeyMap[K, V]) SecondaryKeys(primaryKey K) iter.Seq2[string, string
 	}
 }
 
-// KeyGroups returns a copy of all key groups,
-// mapping group to secondary key to primary key.
-// Changes to the result do not affect the map.
-func (m *MultiKeyMap[K, V]) KeyGroups() map[string]map[string]K {
-	result := make(map[string]map[string]K)
-	for group, keys := range m.secondary {
-		result[group] = make(map[string]K)
-		for key, primary := range keys {
-			result[group][key] = primary
+// Groups returns an iterator over the names of all groups that hold secondary keys.
+// The iteration order is unspecified, like for a Go map.
+func (m *MultiKeyMap[K, V]) Groups() iter.Seq[string] {
+	return func(yield func(string) bool) {
+		for group := range m.secondary {
+			if !yield(group) {
+				return
+			}
 		}
 	}
-	return result
+}
+
+// GroupKeys returns an iterator over the secondary keys in group
+// and the primary keys they point to.
+// The iteration order is unspecified, like for a Go map.
+// If group does not exist, the iterator yields nothing.
+func (m *MultiKeyMap[K, V]) GroupKeys(group string) iter.Seq2[string, K] {
+	return func(yield func(string, K) bool) {
+		for key, primaryKey := range m.secondary[group] {
+			if !yield(key, primaryKey) {
+				return
+			}
+		}
+	}
 }
 
 // Delete removes primaryKey, its value and all its secondary keys.

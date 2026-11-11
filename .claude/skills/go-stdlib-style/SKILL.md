@@ -15,7 +15,7 @@ Sources of truth, in order: the stdlib itself, Effective Go, Go Code Review Comm
 
 - Short, plain verbs from the stdlib vocabulary: `Get`/`Load`, `Set`/`Store`, `Delete`, `Len`, `Clear`, `Clone`, `All`, `Keys`, `Values`.
 - `Len()`, not `Size()`; `Delete`, not `Remove`; an emptiness check is `Len() == 0`.
-- Getters carry no `Get` prefix: `Owner()`, `KeyGroups()`. `Get` stays for keyed lookup (`Get(key)`).
+- Getters carry no `Get` prefix: `Owner()`, `Groups()`. `Get` stays for keyed lookup (`Get(key)`).
 - The package name is part of the identifier: `multikeymap.New`, not `multikeymap.NewMultiKeyMap`.
 - Initialisms keep their case: `ID`, `URL`, `JSON`.
 - Receiver names are one or two letters, the same across all methods of a type.

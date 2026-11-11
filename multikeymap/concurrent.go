@@ -74,13 +74,22 @@ func (c *ConcurrentMultiKeyMap[K, V]) SecondaryKeys(primaryKey K) iter.Seq2[stri
 	return snapshot2(&c.mu, func() iter.Seq2[string, string] { return c.m.SecondaryKeys(primaryKey) })
 }
 
-// KeyGroups returns a copy of all key groups,
-// mapping group to secondary key to primary key.
-// Changes to the result do not affect the map.
-func (c *ConcurrentMultiKeyMap[K, V]) KeyGroups() map[string]map[string]K {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.m.KeyGroups()
+// Groups returns an iterator over the names of all groups that hold secondary keys.
+// The iteration order is unspecified, like for a Go map.
+// Each iteration sees a snapshot taken when it starts and holds no lock while it runs,
+// so the loop body may modify the map.
+func (c *ConcurrentMultiKeyMap[K, V]) Groups() iter.Seq[string] {
+	return snapshot(&c.mu, c.m.Groups)
+}
+
+// GroupKeys returns an iterator over the secondary keys in group
+// and the primary keys they point to.
+// The iteration order is unspecified, like for a Go map.
+// If group does not exist, the iterator yields nothing.
+// Each iteration sees a snapshot taken when it starts and holds no lock while it runs,
+// so the loop body may modify the map.
+func (c *ConcurrentMultiKeyMap[K, V]) GroupKeys(group string) iter.Seq2[string, K] {
+	return snapshot2(&c.mu, func() iter.Seq2[string, K] { return c.m.GroupKeys(group) })
 }
 
 // Delete removes primaryKey, its value and all its secondary keys.

@@ -2,6 +2,7 @@ package multikeymap
 
 import (
 	"fmt"
+	"iter"
 	"maps"
 	"slices"
 	"strconv"
@@ -63,7 +64,7 @@ func TestMultiKeyMap_AddSecondaryKeysReportsMissingPrimaryKey(t *testing.T) {
 
 	// then
 	assert.False(t, mm.HasSecondaryKey("group1", "secKey1"))
-	assert.Empty(t, mm.KeyGroups())
+	assert.Empty(t, keyGroups[string](mm))
 
 	// given
 	mm.Set("key1", 1)
@@ -142,7 +143,7 @@ func TestMultiKeyMap_DeleteDeletesAllSecondaryKeysOfGroup(t *testing.T) {
 	assert.False(t, mm.HasSecondaryKey("group1", "secKey1"))
 	assert.False(t, mm.HasSecondaryKey("group1", "secKey2"))
 	assert.False(t, mm.HasSecondaryKey("group2", "secKey3"))
-	assert.Empty(t, mm.KeyGroups())
+	assert.Empty(t, keyGroups[string](mm))
 	assert.Empty(t, mm.secondaryTo)
 }
 
@@ -193,7 +194,7 @@ func TestMultiKeyMap_AddSecondaryKeysMovesKeyToNewPrimaryKey(t *testing.T) {
 	mm.Delete("key2")
 
 	// then
-	assert.Empty(t, mm.KeyGroups())
+	assert.Empty(t, keyGroups[string](mm))
 	assert.Empty(t, mm.secondaryTo)
 }
 
@@ -209,7 +210,7 @@ func TestMultiKeyMap_AddSecondaryKeysMoveDropsEmptyReverseEntry(t *testing.T) {
 
 	// then
 	assert.NotContains(t, mm.secondaryTo, "key1")
-	assert.Equal(t, map[string]map[string]string{"group1": {"secKey1": "key2"}}, mm.KeyGroups())
+	assert.Equal(t, map[string]map[string]string{"group1": {"secKey1": "key2"}}, keyGroups[string](mm))
 }
 
 func TestMultiKeyMap_AddSecondaryKeysWithoutKeys(t *testing.T) {
@@ -221,11 +222,29 @@ func TestMultiKeyMap_AddSecondaryKeysWithoutKeys(t *testing.T) {
 	mm.AddSecondaryKeys("key1", "group1")
 
 	// then
-	assert.Empty(t, mm.KeyGroups())
+	assert.Empty(t, keyGroups[string](mm))
 	assert.Empty(t, mm.secondaryTo)
 }
 
-func TestMultiKeyMap_KeyGroups(t *testing.T) {
+func TestMultiKeyMap_Clear_DuringGroupKeys(t *testing.T) {
+	// given
+	mm := New[int, string]()
+	mm.Set(1, "value1")
+	mm.AddSecondaryKeys(1, "group1", "secKey1", "secKey2", "secKey3")
+
+	// when
+	yielded := 0
+	for range mm.GroupKeys("group1") {
+		yielded++
+		mm.Clear()
+	}
+
+	// then
+	assert.Equal(t, 1, yielded)
+	assert.Empty(t, keyGroups[int](mm))
+}
+
+func TestMultiKeyMap_Groups(t *testing.T) {
 	// given
 	mm := New[string, int]()
 	mm.Set("key1", 1)
@@ -234,12 +253,50 @@ func TestMultiKeyMap_KeyGroups(t *testing.T) {
 	mm.AddSecondaryKeys("key2", "group2", "secKey3")
 
 	// when
-	allGroups := mm.KeyGroups()
+	groups := slices.Sorted(mm.Groups())
 
 	// then
-	if len(allGroups) != 2 || len(allGroups["group1"]) != 2 || len(allGroups["group2"]) != 1 {
-		t.Errorf("expected allGroups to contain 'group1' and 'group2' with correct keys, got %v", allGroups)
+	assert.Equal(t, []string{"group1", "group2"}, groups)
+}
+
+func TestMultiKeyMap_GroupKeys(t *testing.T) {
+	// given
+	mm := New[string, int]()
+	mm.Set("key1", 1)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1", "secKey2")
+	mm.Set("key2", 2)
+	mm.AddSecondaryKeys("key2", "group1", "secKey3")
+	mm.AddSecondaryKeys("key2", "group2", "secKey4")
+
+	// when
+	keys := maps.Collect(mm.GroupKeys("group1"))
+
+	// then
+	assert.Equal(t, map[string]string{"secKey1": "key1", "secKey2": "key1", "secKey3": "key2"}, keys)
+	assert.Empty(t, maps.Collect(mm.GroupKeys("missing")))
+}
+
+func TestMultiKeyMap_GroupsStopsEarly(t *testing.T) {
+	// given
+	mm := New[string, int]()
+	mm.Set("key1", 1)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1", "secKey2")
+	mm.AddSecondaryKeys("key1", "group2", "secKey3")
+
+	// when
+	groups, keys := 0, 0
+	for range mm.Groups() {
+		groups++
+		break
 	}
+	for range mm.GroupKeys("group1") {
+		keys++
+		break
+	}
+
+	// then
+	assert.Equal(t, 1, groups)
+	assert.Equal(t, 1, keys)
 }
 
 func TestMultiKeyMap_GetBySecondaryKey_NotFound(t *testing.T) {
@@ -345,7 +402,7 @@ func TestMultiKeyMap_ZeroValueReads(t *testing.T) {
 	assert.False(t, ok)
 	assert.False(t, mm.Has("key1"))
 	assert.False(t, mm.HasSecondaryKey("group1", "secKey1"))
-	assert.Empty(t, mm.KeyGroups())
+	assert.Empty(t, keyGroups[string](&mm))
 	assert.Equal(t, 0, mm.Len())
 	assert.Empty(t, slices.Collect(mm.Values()))
 	assert.Equal(t, "MultiKeyMap: map[]", mm.String())
@@ -378,7 +435,7 @@ func TestMultiKeyMap_ZeroValueWrites(t *testing.T) {
 
 	// then
 	assert.True(t, mm.AddSecondaryKeys("key2", "group1", "secKey2"))
-	assert.Equal(t, map[string]map[string]string{"group1": {"secKey2": "key2"}}, mm.KeyGroups())
+	assert.Equal(t, map[string]map[string]string{"group1": {"secKey2": "key2"}}, keyGroups[string](&mm))
 }
 
 func TestMultiKeyMap_All(t *testing.T) {
@@ -551,7 +608,7 @@ func TestMultiKeyMap_LoadAndDelete(t *testing.T) {
 	assert.Equal(t, 1, value)
 	assert.False(t, mm.Has("key1"))
 	assert.False(t, mm.HasSecondaryKey("group1", "secKey1"))
-	assert.Empty(t, mm.KeyGroups())
+	assert.Empty(t, keyGroups[string](&mm))
 
 	// when
 	_, loaded = mm.LoadAndDelete("key1")
@@ -607,7 +664,7 @@ func TestMultiKeyMap_UpdateDeletesExistingKey(t *testing.T) {
 	// then
 	assert.False(t, mm.Has("key1"))
 	assert.False(t, mm.HasSecondaryKey("group1", "secKey1"))
-	assert.Empty(t, mm.KeyGroups())
+	assert.Empty(t, keyGroups[string](mm))
 }
 
 func TestMultiKeyMap_UpdateWithoutKeepOnMissingKeyIsNoOp(t *testing.T) {
@@ -636,20 +693,20 @@ func TestMultiKeyMap_DeleteSecondaryKey(t *testing.T) {
 	// then
 	assert.False(t, mm.HasSecondaryKey("group1", "secKey1"))
 	assert.True(t, mm.Has("key1"))
-	assert.Equal(t, map[string]map[string]string{"group1": {"secKey2": "key1", "secKey3": "key2"}}, mm.KeyGroups())
+	assert.Equal(t, map[string]map[string]string{"group1": {"secKey2": "key1", "secKey3": "key2"}}, keyGroups[string](mm))
 
 	// when
 	mm.DeleteSecondaryKey("group1", "secKey2")
 
 	// then
 	assert.Empty(t, maps.Collect(mm.SecondaryKeys("key1")))
-	assert.Equal(t, map[string]map[string]string{"group1": {"secKey3": "key2"}}, mm.KeyGroups())
+	assert.Equal(t, map[string]map[string]string{"group1": {"secKey3": "key2"}}, keyGroups[string](mm))
 
 	// when
 	mm.DeleteSecondaryKey("group1", "secKey3")
 
 	// then
-	assert.Empty(t, mm.KeyGroups())
+	assert.Empty(t, keyGroups[string](mm))
 	assert.Empty(t, mm.secondaryTo)
 	assert.Equal(t, 2, mm.Len())
 }
@@ -666,7 +723,7 @@ func TestMultiKeyMap_DeleteSecondaryKeyMissingIsNoOp(t *testing.T) {
 	mm.DeleteSecondaryKey("missing", "secKey1")
 
 	// then
-	assert.Equal(t, map[string]map[string]string{"group1": {"secKey1": "key1"}}, mm.KeyGroups())
+	assert.Equal(t, map[string]map[string]string{"group1": {"secKey1": "key1"}}, keyGroups[string](&mm))
 }
 
 func TestMultiKeyMap_DeleteGroup(t *testing.T) {
@@ -682,7 +739,7 @@ func TestMultiKeyMap_DeleteGroup(t *testing.T) {
 	mm.DeleteGroup("group1")
 
 	// then
-	assert.Equal(t, map[string]map[string]string{"group2": {"secKey1": "key1"}}, mm.KeyGroups())
+	assert.Equal(t, map[string]map[string]string{"group2": {"secKey1": "key1"}}, keyGroups[string](mm))
 	assert.Equal(t, map[string]string{"group2": "secKey1"}, maps.Collect(mm.SecondaryKeys("key1")))
 	assert.Empty(t, maps.Collect(mm.SecondaryKeys("key2")))
 	assert.NotContains(t, mm.secondaryTo, "key2")
@@ -692,7 +749,7 @@ func TestMultiKeyMap_DeleteGroup(t *testing.T) {
 	mm.DeleteGroup("group2")
 
 	// then
-	assert.Empty(t, mm.KeyGroups())
+	assert.Empty(t, keyGroups[string](mm))
 	assert.Empty(t, mm.secondaryTo)
 }
 
@@ -707,7 +764,7 @@ func TestMultiKeyMap_DeleteGroupMissingIsNoOp(t *testing.T) {
 	mm.DeleteGroup("missing")
 
 	// then
-	assert.Equal(t, map[string]map[string]string{"group1": {"secKey1": "key1"}}, mm.KeyGroups())
+	assert.Equal(t, map[string]map[string]string{"group1": {"secKey1": "key1"}}, keyGroups[string](&mm))
 }
 
 func TestMultiKeyMap_DeleteBySecondaryKey(t *testing.T) {
@@ -725,7 +782,7 @@ func TestMultiKeyMap_DeleteBySecondaryKey(t *testing.T) {
 	// then
 	assert.False(t, mm.Has("key1"))
 	assert.True(t, mm.Has("key2"))
-	assert.Equal(t, map[string]map[string]string{"group1": {"secKey3": "key2"}}, mm.KeyGroups())
+	assert.Equal(t, map[string]map[string]string{"group1": {"secKey3": "key2"}}, keyGroups[string](mm))
 }
 
 func TestMultiKeyMap_DeleteBySecondaryKeyMissingIsNoOp(t *testing.T) {
@@ -757,7 +814,7 @@ func TestMultiKeyMap_Clone(t *testing.T) {
 
 	// then
 	assert.Equal(t, maps.Collect(mm.All()), maps.Collect(clone.All()))
-	assert.Equal(t, mm.KeyGroups(), clone.KeyGroups())
+	assert.Equal(t, keyGroups[string](mm), keyGroups[string](clone))
 
 	// when
 	// Changes to the clone and to the original stay apart.
@@ -773,11 +830,11 @@ func TestMultiKeyMap_Clone(t *testing.T) {
 	assert.Equal(t, map[string]map[string]string{
 		"group1": {"secKey1": "key1", "secKey2": "key1"},
 		"group2": {"secKey3": "key2", "secKey5": "key2"},
-	}, mm.KeyGroups())
+	}, keyGroups[string](mm))
 	assert.Equal(t, map[string]int{"key1": 10, "key2": 2, "key3": 3}, maps.Collect(clone.All()))
 	assert.Equal(t, map[string]map[string]string{
 		"group1": {"secKey2": "key1", "secKey4": "key3"},
-	}, clone.KeyGroups())
+	}, keyGroups[string](clone))
 
 	// when
 	// The reverse index of the original is not shared either.
@@ -818,7 +875,7 @@ func TestMultiKeyMap_CloneZeroValue(t *testing.T) {
 	// then
 	assert.True(t, clone.AddSecondaryKeys("key1", "group1", "secKey1"))
 	assert.Equal(t, 0, mm.Len())
-	assert.Empty(t, mm.KeyGroups())
+	assert.Empty(t, keyGroups[string](&mm))
 }
 
 func TestMultiKeyMap_DeleteFunc(t *testing.T) {
@@ -837,7 +894,7 @@ func TestMultiKeyMap_DeleteFunc(t *testing.T) {
 	assert.Equal(t, map[string]int{"key0": 0, "key2": 2}, maps.Collect(mm.All()))
 	assert.Equal(t, map[string]map[string]string{
 		"group1": {"secKey0": "key0", "secKey2": "key2"},
-	}, mm.KeyGroups())
+	}, keyGroups[string](mm))
 	assert.NotContains(t, mm.secondaryTo, "key1")
 	assert.NotContains(t, mm.secondaryTo, "key3")
 }
@@ -998,4 +1055,20 @@ func TestMultiKeyMap_LoadAndDeleteBySecondaryKey(t *testing.T) {
 
 	// then
 	assert.False(t, loaded)
+}
+
+// groupLister is implemented by MultiKeyMap and ConcurrentMultiKeyMap.
+type groupLister[K comparable] interface {
+	Groups() iter.Seq[string]
+	GroupKeys(group string) iter.Seq2[string, K]
+}
+
+// keyGroups collects all groups as group -> secondary key -> primary key,
+// to compare the whole secondary index in one assertion.
+func keyGroups[K comparable](m groupLister[K]) map[string]map[string]K {
+	result := make(map[string]map[string]K)
+	for group := range m.Groups() {
+		result[group] = maps.Collect(m.GroupKeys(group))
+	}
+	return result
 }
