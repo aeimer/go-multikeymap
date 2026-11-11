@@ -150,6 +150,44 @@ func (m *MultiKeyMap[K, V]) Delete(primaryKey K) {
 	delete(m.secondaryTo, primaryKey)
 }
 
+// DeleteSecondaryKey removes the secondary key in group.
+// The primary key it points to and its value stay.
+// If the secondary key does not exist, DeleteSecondaryKey is a no-op.
+func (m *MultiKeyMap[K, V]) DeleteSecondaryKey(group string, key string) {
+	primaryKey, exists := m.secondary[group][key]
+	if !exists {
+		return
+	}
+	delete(m.secondary[group], key)
+	if len(m.secondary[group]) == 0 {
+		delete(m.secondary, group)
+	}
+	m.removeReverseEntry(primaryKey, group, key)
+}
+
+// DeleteGroup removes group and all its secondary keys.
+// The primary keys and their values stay.
+// If group does not exist, DeleteGroup is a no-op.
+func (m *MultiKeyMap[K, V]) DeleteGroup(group string) {
+	for _, primaryKey := range m.secondary[group] {
+		groups := m.secondaryTo[primaryKey]
+		delete(groups, group)
+		if len(groups) == 0 {
+			delete(m.secondaryTo, primaryKey)
+		}
+	}
+	delete(m.secondary, group)
+}
+
+// DeleteBySecondaryKey removes the primary key that the secondary key in group points to,
+// its value and all its secondary keys, like Delete.
+// If the secondary key does not exist, DeleteBySecondaryKey is a no-op.
+func (m *MultiKeyMap[K, V]) DeleteBySecondaryKey(group string, key string) {
+	if primaryKey, exists := m.secondary[group][key]; exists {
+		m.Delete(primaryKey)
+	}
+}
+
 // LoadOrStore returns the value of primaryKey if it exists.
 // Otherwise, it stores value under primaryKey and returns value.
 // The loaded result is true if the value was loaded, false if stored.
