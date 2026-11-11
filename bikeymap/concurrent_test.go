@@ -212,6 +212,26 @@ func TestConcurrentBiKeyMap_ConcurrentAccess(t *testing.T) {
 	wg.Wait()
 }
 
+func TestConcurrentBiKeyMap_SizeAndEmptyDuringPut(t *testing.T) {
+	bm := NewConcurrent[string, int, string]()
+	var wg sync.WaitGroup
+	const numGoroutines = 100
+
+	for i := range numGoroutines {
+		wg.Go(func() {
+			assert.NoError(t, bm.Put(strconv.Itoa(i), i, "value"))
+		})
+		wg.Go(func() {
+			_ = bm.Size()
+			_ = bm.Empty()
+		})
+	}
+	wg.Wait()
+
+	assert.Equal(t, numGoroutines, bm.Size())
+	assert.False(t, bm.Empty())
+}
+
 func concurrentSet(t *testing.T, i int, wg *sync.WaitGroup, bm *ConcurrentBiKeyMap[string, int, string]) {
 	t.Helper()
 	defer wg.Done()

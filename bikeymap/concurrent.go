@@ -109,11 +109,17 @@ func (m *ConcurrentBiKeyMap[KeyA, KeyB, V]) RemoveByKeyB(keyB KeyB) error {
 
 // Empty checks if the map is empty.
 func (m *ConcurrentBiKeyMap[KeyA, KeyB, V]) Empty() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	return len(m.dataByKeyA) == 0
 }
 
 // Size returns the number of elements in the map.
 func (m *ConcurrentBiKeyMap[KeyA, KeyB, V]) Size() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	return len(m.dataByKeyA)
 }
 
