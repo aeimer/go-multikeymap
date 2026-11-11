@@ -7,6 +7,7 @@ import (
 
 // BiKeyMap is a generic in-memory map with two independent keys for each value.
 // It implements container/Container.
+// A BiKeyMap is not safe for concurrent use; use ConcurrentBiKeyMap instead.
 type BiKeyMap[KeyA comparable, KeyB comparable, V any] struct {
 	dataByKeyA map[KeyA]V
 	keyAByKeyB map[KeyB]KeyA
@@ -22,7 +23,9 @@ func New[KeyA comparable, KeyB comparable, V any]() *BiKeyMap[KeyA, KeyB, V] {
 	}
 }
 
-// Put stores a value with two keys. It only fails if one of the keys is already set without the other.
+// Put stores a value with two keys.
+// It returns an error and changes nothing if keyA or keyB is already paired with a different key.
+// If both keys are already paired with each other, Put replaces the value.
 func (m *BiKeyMap[KeyA, KeyB, V]) Put(keyA KeyA, keyB KeyB, value V) error {
 	// Check if one key is set without the other, or if they do not point to each other.
 	if existingKeyA, keyBExists := m.keyAByKeyB[keyB]; keyBExists && existingKeyA != keyA {
@@ -58,6 +61,7 @@ func (m *BiKeyMap[KeyA, KeyB, V]) GetByKeyB(keyB KeyB) (V, bool) {
 }
 
 // RemoveByKeyA removes a value using the first key, ensuring the corresponding second key is also deleted.
+// It returns an error if keyA does not exist.
 func (m *BiKeyMap[KeyA, KeyB, V]) RemoveByKeyA(keyA KeyA) error {
 	// Verify that keyA exists and retrieve the associated keyB.
 	keyB, ok := m.keyBByKeyA[keyA]
@@ -74,6 +78,7 @@ func (m *BiKeyMap[KeyA, KeyB, V]) RemoveByKeyA(keyA KeyA) error {
 }
 
 // RemoveByKeyB removes a value using the second key, ensuring the corresponding first key is also deleted.
+// It returns an error if keyB does not exist.
 func (m *BiKeyMap[KeyA, KeyB, V]) RemoveByKeyB(keyB KeyB) error {
 	// Verify that keyB exists and retrieve the associated keyA.
 	keyA, ok := m.keyAByKeyB[keyB]
