@@ -797,3 +797,50 @@ func TestConcurrentBiKeyMap_String_ValueCallsBack(t *testing.T) {
 		t.Fatal("String deadlocked")
 	}
 }
+
+func TestConcurrentBiKeyMap_Pairs(t *testing.T) {
+	// given
+	bm := NewConcurrent[string, int, string]()
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
+
+	// when
+	pairs := maps.Collect(bm.Pairs())
+
+	// then
+	assert.Equal(t, map[string]int{"keyA1": 1, "keyA2": 2}, pairs)
+}
+
+func TestConcurrentBiKeyMap_PairsStopsEarly(t *testing.T) {
+	// given
+	bm := NewConcurrent[string, int, string]()
+	bm.Set("keyA1", 1, "value1")
+	bm.Set("keyA2", 2, "value2")
+
+	// when
+	count := 0
+	for range bm.Pairs() {
+		count++
+		break
+	}
+
+	// then
+	assert.Equal(t, 1, count)
+}
+
+func TestConcurrentBiKeyMap_PairsAllowsWritesInLoop(t *testing.T) {
+	// given
+	bm := NewConcurrent[string, int, string]()
+	bm.Set("keyA1", 1, "value1")
+
+	// when
+	requireNoDeadlock(t, func() {
+		for keyA, keyB := range bm.Pairs() {
+			bm.DeleteByKeyA(keyA)
+			bm.Set("pairs", keyB+1, "value2")
+		}
+	})
+
+	// then
+	assert.Equal(t, map[string]int{"pairs": 2}, maps.Collect(bm.Pairs()))
+}
