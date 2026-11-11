@@ -402,11 +402,16 @@ func BenchmarkMultiKeyMapDelete(b *testing.B) {
 	for _, v := range benchmarkSizes {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
 			m := New[string, int]()
-			for n := range v.size {
-				m.Set(strconv.Itoa(n), n)
-			}
-			b.ResetTimer()
-			for range b.N {
+			for b.Loop() {
+				// Refill outside the timer so that every iteration deletes existing keys
+				// and their secondary keys.
+				b.StopTimer()
+				for n := range v.size {
+					key := strconv.Itoa(n)
+					m.Set(key, n)
+					m.AddSecondaryKeys(key, "group", key)
+				}
+				b.StartTimer()
 				for n := range v.size {
 					m.Delete(strconv.Itoa(n))
 				}

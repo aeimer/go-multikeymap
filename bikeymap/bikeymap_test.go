@@ -301,11 +301,13 @@ func BenchmarkBiKeyMapDelete(b *testing.B) {
 	for _, v := range benchmarkSizes {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
 			m := New[string, int, string]()
-			for n := range v.size {
-				_ = m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
-			}
-			b.ResetTimer()
-			for range b.N {
+			for b.Loop() {
+				// Refill outside the timer so that every iteration deletes existing keys.
+				b.StopTimer()
+				for n := range v.size {
+					_ = m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
+				}
+				b.StartTimer()
 				for n := range v.size {
 					m.DeleteByKeyB(n)
 				}
