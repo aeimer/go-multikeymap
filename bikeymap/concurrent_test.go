@@ -743,3 +743,34 @@ func BenchmarkConcurrentBiKeyMapDelete(b *testing.B) {
 		})
 	}
 }
+
+// reentrantValue calls back into its map from String,
+// while a writer waits for the lock.
+type reentrantValue struct {
+	m *ConcurrentBiKeyMap[string, int, reentrantValue]
+}
+
+func (v reentrantValue) String() string {
+	go func() { _ = v.m.Set("writer", 2, reentrantValue{}) }()
+	// Give the writer time to block on the lock, if String holds it.
+	time.Sleep(20 * time.Millisecond)
+	return strconv.Itoa(v.m.Len())
+}
+
+func TestConcurrentBiKeyMap_String_ValueCallsBack(t *testing.T) {
+	// given
+	bm := NewConcurrent[string, int, reentrantValue]()
+	require.NoError(t, bm.Set("self", 1, reentrantValue{m: bm}))
+
+	// when
+	done := make(chan string)
+	go func() { done <- bm.String() }()
+
+	// then
+	select {
+	case s := <-done:
+		assert.Contains(t, s, "ConcurrentBiKeyMap: map[self:")
+	case <-time.After(2 * time.Second):
+		t.Fatal("String deadlocked")
+	}
+}

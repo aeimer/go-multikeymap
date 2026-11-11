@@ -3,6 +3,7 @@ package multikeymap
 import (
 	"fmt"
 	"iter"
+	"maps"
 	"slices"
 	"sync"
 )
@@ -223,9 +224,10 @@ func (c *ConcurrentMultiKeyMap[K, V]) Clear() {
 
 // String returns a string representation of the map.
 func (c *ConcurrentMultiKeyMap[K, V]) String() string {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return fmt.Sprintf("ConcurrentMultiKeyMap: %v", c.m.primary)
+	// All copies the entries under the read lock and yields them without it,
+	// so a value's String method may call back into the map without a deadlock.
+	// Collecting into a map lets fmt sort the keys like the plain String does.
+	return fmt.Sprint("ConcurrentMultiKeyMap: ", maps.Collect(c.All()))
 }
 
 // snapshot returns an iterator that, when iteration starts, collects seq() under the read lock
