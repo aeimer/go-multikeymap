@@ -7,7 +7,7 @@ DISCLAIMER: Until version 1 is reached, the API may change.
 A go lib which handles maps with multiple keys.
 Both data-structures are available in go routine safe (concurrent) and a non-concurrent version.
 The zero value of every type is ready to use, `New` is optional.
-Iterators (`All`, `Keys`, `Values`) follow the standard library; their order is unspecified, like for a Go map.
+Iterators (`All`, `Keys` and `Values` on MultiKeyMap; `All`, `KeysA`, `KeysB` and `Values` on BiKeyMap) follow the standard library; their order is unspecified, like for a Go map.
 The iterators of the concurrent types work on a snapshot, so the loop body may write to the map.
 
 * **MultiKeyMap** is a data structure based on go native maps.

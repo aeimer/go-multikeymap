@@ -1,3 +1,10 @@
+// Package multikeymap provides a map with one primary key and any number of
+// secondary string keys, grouped by name.
+//
+// Each value is stored once under its primary key; secondary keys point to the
+// primary key, so a lookup by either key costs O(1).
+// MultiKeyMap is not safe for concurrent use; ConcurrentMultiKeyMap is.
+// The zero value of both types is an empty map ready to use.
 package multikeymap
 
 import (
