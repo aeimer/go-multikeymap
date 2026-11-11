@@ -89,3 +89,74 @@ func ExampleConcurrentMultiKeyMap_All() {
 	// Output:
 	// 2
 }
+
+func ExampleMultiKeyMap_LoadOrStore() {
+	var m multikeymap.MultiKeyMap[string, int]
+
+	population, loaded := m.LoadOrStore("berlin", 3_500_000)
+	fmt.Println(population, loaded)
+
+	// The second call keeps the stored value.
+	population, loaded = m.LoadOrStore("berlin", 0)
+	fmt.Println(population, loaded)
+
+	// Output:
+	// 3500000 false
+	// 3500000 true
+}
+
+func ExampleMultiKeyMap_Update() {
+	var visits multikeymap.MultiKeyMap[string, int]
+	visits.Set("berlin", 0)
+	visits.AddSecondaryKeys("berlin", "postcode", "10115")
+
+	// Count visits; a missing key starts at 0.
+	for _, city := range []string{"berlin", "hamburg", "berlin"} {
+		visits.Update(city, func(old int, _ bool) (int, bool) {
+			return old + 1, true
+		})
+	}
+	count, _ := visits.GetBySecondaryKey("postcode", "10115")
+	fmt.Println(count)
+
+	// Returning false deletes the entry.
+	visits.Update("hamburg", func(int, bool) (int, bool) { return 0, false })
+	fmt.Println(visits.Has("hamburg"))
+
+	// Output:
+	// 2
+	// false
+}
+
+func ExampleMultiKeyMap_DeleteBySecondaryKey() {
+	m := multikeymap.New[string, int]()
+	m.Set("berlin", 3_500_000)
+	m.AddSecondaryKeys("berlin", "postcode", "10115")
+	m.AddSecondaryKeys("berlin", "plate", "B")
+
+	// Deletes berlin with all its secondary keys.
+	m.DeleteBySecondaryKey("plate", "B")
+	fmt.Println(m.Has("berlin"), m.HasSecondaryKey("postcode", "10115"))
+
+	// Output:
+	// false false
+}
+
+func ExampleMultiKeyMap_Clone() {
+	m := multikeymap.New[string, int]()
+	m.Set("berlin", 3_500_000)
+	m.AddSecondaryKeys("berlin", "postcode", "10115")
+
+	c := m.Clone()
+	c.Set("berlin", 3_600_000)
+	c.DeleteSecondaryKey("postcode", "10115")
+
+	population, _ := m.Get("berlin")
+	fmt.Println(population, m.HasSecondaryKey("postcode", "10115"))
+	population, _ = c.Get("berlin")
+	fmt.Println(population, c.HasSecondaryKey("postcode", "10115"))
+
+	// Output:
+	// 3500000 true
+	// 3600000 false
+}

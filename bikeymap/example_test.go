@@ -80,3 +80,20 @@ func ExampleBiKeyMap_Set() {
 	// Output:
 	// true
 }
+
+func ExampleBiKeyMap_Clone() {
+	m := bikeymap.New[string, int, string]()
+	_ = m.Set("berlin", 10115, "capital")
+
+	c := m.Clone()
+	_ = c.Set("berlin", 10115, "city")
+	c.DeleteByKeyB(10115)
+
+	value, ok := m.GetByKeyB(10115)
+	fmt.Println(value, ok)
+	fmt.Println(c.Len())
+
+	// Output:
+	// capital true
+	// 0
+}
