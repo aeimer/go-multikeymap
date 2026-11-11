@@ -1026,3 +1026,59 @@ func TestConcurrentMultiKeyMap_String_ValueCallsBack(t *testing.T) {
 		t.Fatal("String deadlocked")
 	}
 }
+
+func TestConcurrentMultiKeyMap_LoadAndDeleteBySecondaryKey(t *testing.T) {
+	// given
+	var mm ConcurrentMultiKeyMap[string, int]
+
+	// when
+	_, loaded := mm.LoadAndDeleteBySecondaryKey("group1", "secKey1")
+
+	// then
+	assert.False(t, loaded)
+
+	// given
+	mm.Set("key1", 1)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1")
+	mm.AddSecondaryKeys("key1", "group2", "secKey2")
+	mm.Set("key2", 2)
+
+	// when
+	value, loaded := mm.LoadAndDeleteBySecondaryKey("group1", "secKey1")
+
+	// then
+	assert.True(t, loaded)
+	assert.Equal(t, 1, value)
+	assert.False(t, mm.Has("key1"))
+	assert.False(t, mm.HasSecondaryKey("group1", "secKey1"))
+	assert.False(t, mm.HasSecondaryKey("group2", "secKey2"))
+	assert.True(t, mm.Has("key2"))
+
+	// when
+	_, loaded = mm.LoadAndDeleteBySecondaryKey("group1", "secKey1")
+
+	// then
+	assert.False(t, loaded)
+}
+
+func TestConcurrentMultiKeyMap_LoadAndDeleteBySecondaryKeyLoadsOnce(t *testing.T) {
+	// given
+	var mm ConcurrentMultiKeyMap[string, int]
+	mm.Set("key1", 1)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1")
+	var wg sync.WaitGroup
+	var loadedCount atomic.Int32
+
+	// when
+	for range 100 {
+		wg.Go(func() {
+			if _, loaded := mm.LoadAndDeleteBySecondaryKey("group1", "secKey1"); loaded {
+				loadedCount.Add(1)
+			}
+		})
+	}
+	wg.Wait()
+
+	// then
+	assert.Equal(t, int32(1), loadedCount.Load())
+}

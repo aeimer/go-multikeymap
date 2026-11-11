@@ -142,6 +142,19 @@ func ExampleMultiKeyMap_DeleteBySecondaryKey() {
 	// false false
 }
 
+func ExampleMultiKeyMap_LoadAndDeleteBySecondaryKey() {
+	m := multikeymap.New[string, int]()
+	m.Set("berlin", 3_500_000)
+	m.AddSecondaryKeys("berlin", "plate", "B")
+
+	// Deletes berlin with all its secondary keys and returns its value.
+	population, loaded := m.LoadAndDeleteBySecondaryKey("plate", "B")
+	fmt.Println(population, loaded, m.Len())
+
+	// Output:
+	// 3500000 true 0
+}
+
 func ExampleMultiKeyMap_Clone() {
 	m := multikeymap.New[string, int]()
 	m.Set("berlin", 3_500_000)

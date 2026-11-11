@@ -83,6 +83,7 @@ func main() {
   mm.DeleteBySecondaryKey("plate", "HH")     // no-op: the key does not exist
   value, ok := mm.LoadAndDelete("Berlin")    // City{"Berlin", 3_500_000}, true
   fmt.Println(value, ok)
+  mm.LoadAndDeleteBySecondaryKey("plate", "HH") // City{}, false: the key does not exist
   mm.Len() // 1
 }
 ```

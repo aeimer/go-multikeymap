@@ -218,6 +218,18 @@ func (m *MultiKeyMap[K, V]) LoadAndDelete(primaryKey K) (value V, loaded bool) {
 	return value, loaded
 }
 
+// LoadAndDeleteBySecondaryKey removes the primary key that the secondary key in group points to,
+// its value and all its secondary keys, like DeleteBySecondaryKey,
+// and returns the previous value, if any.
+// The loaded result reports whether the secondary key existed.
+func (m *MultiKeyMap[K, V]) LoadAndDeleteBySecondaryKey(group string, key string) (value V, loaded bool) {
+	primaryKey, exists := m.secondary[group][key]
+	if !exists {
+		return value, false
+	}
+	return m.LoadAndDelete(primaryKey)
+}
+
 // Update calls fn with the current value of primaryKey and whether it exists.
 // If fn returns true, Update stores the returned value under primaryKey;
 // it creates primaryKey if needed and keeps its existing secondary keys.
