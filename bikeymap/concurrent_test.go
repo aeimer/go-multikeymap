@@ -2,7 +2,9 @@ package bikeymap
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 
@@ -12,7 +14,7 @@ import (
 
 func ExampleNewConcurrent() {
 	bm := NewConcurrent[string, int, string]()
-	_ = bm.Put("keyA1", 1, "value1")
+	_ = bm.Set("keyA1", 1, "value1")
 	value, exists := bm.GetByKeyA("keyA1")
 	fmt.Printf("[Key A] value: %v, exists: %v\n", value, exists)
 	value, exists = bm.GetByKeyB(1)
@@ -25,7 +27,7 @@ func ExampleNewConcurrent() {
 func TestConcurrentBiKeyMap_SetAndGet(t *testing.T) {
 	bm := NewConcurrent[string, int, string]()
 
-	err := bm.Put("keyA1", 1, "value1")
+	err := bm.Set("keyA1", 1, "value1")
 	require.NoError(t, err)
 
 	value, exists := bm.GetByKeyA("keyA1")
@@ -42,24 +44,23 @@ func TestConcurrentBiKeyMap_SetAndGet(t *testing.T) {
 func TestConcurrentBiKeyMap_SetDuplicateKeys(t *testing.T) {
 	bm := NewConcurrent[string, int, string]()
 
-	err := bm.Put("keyA1", 1, "value1")
+	err := bm.Set("keyA1", 1, "value1")
 	require.NoError(t, err)
 
-	err = bm.Put("keyA2", 1, "value2")
+	err = bm.Set("keyA2", 1, "value2")
 	require.Error(t, err)
 
-	err = bm.Put("keyA1", 2, "value2")
+	err = bm.Set("keyA1", 2, "value2")
 	require.Error(t, err)
 }
 
-func TestConcurrentBiKeyMap_RemoveByKeyA(t *testing.T) {
+func TestConcurrentBiKeyMap_DeleteByKeyA(t *testing.T) {
 	bm := NewConcurrent[string, int, string]()
 
-	err := bm.Put("keyA1", 1, "value1")
+	err := bm.Set("keyA1", 1, "value1")
 	require.NoError(t, err)
 
-	err = bm.RemoveByKeyA("keyA1")
-	require.NoError(t, err)
+	bm.DeleteByKeyA("keyA1")
 
 	_, exists := bm.GetByKeyA("keyA1")
 	if exists {
@@ -72,13 +73,12 @@ func TestConcurrentBiKeyMap_RemoveByKeyA(t *testing.T) {
 	}
 }
 
-func TestConcurrentBiKeyMap_RemoveByKeyB(t *testing.T) {
+func TestConcurrentBiKeyMap_DeleteByKeyB(t *testing.T) {
 	bm := NewConcurrent[string, int, string]()
 
-	err := bm.Put("keyA1", 1, "value1")
+	err := bm.Set("keyA1", 1, "value1")
 	require.NoError(t, err)
-	err = bm.RemoveByKeyB(1)
-	require.NoError(t, err)
+	bm.DeleteByKeyB(1)
 
 	_, exists := bm.GetByKeyA("keyA1")
 	if exists {
@@ -93,82 +93,73 @@ func TestConcurrentBiKeyMap_RemoveByKeyB(t *testing.T) {
 
 func TestConcurrentBiKeyMap_String(t *testing.T) {
 	bm := NewConcurrent[string, int, string]()
-	_ = bm.Put("keyA1", 1, "value1")
+	_ = bm.Set("keyA1", 1, "value1")
 	expected := "ConcurrentBiKeyMap: map[keyA1:value1]"
 	if bm.String() != expected {
 		t.Errorf("expected %s, got %s", expected, bm.String())
 	}
 }
 
-func TestConcurrentBiKeyMap_RemoveByKeyA_NotFound(t *testing.T) {
+func TestConcurrentBiKeyMap_DeleteByKeyA_NotFound(t *testing.T) {
 	bm := NewConcurrent[string, int, string]()
-	err := bm.RemoveByKeyA("nonExistentKey")
-	if err == nil {
-		t.Error("expected error, got nil")
-	}
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	bm.DeleteByKeyA("nonExistentKey")
+	assert.Equal(t, 1, bm.Len())
 }
 
-func TestConcurrentBiKeyMap_RemoveByKeyB_NotFound(t *testing.T) {
+func TestConcurrentBiKeyMap_DeleteByKeyB_NotFound(t *testing.T) {
 	bm := NewConcurrent[string, int, string]()
-	err := bm.RemoveByKeyB(999)
-	if err == nil {
-		t.Error("expected error, got nil")
-	}
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	bm.DeleteByKeyB(999)
+	assert.Equal(t, 1, bm.Len())
 }
-func TestConcurrentBiKeyMap_EmptyAndSize(t *testing.T) {
+func TestConcurrentBiKeyMap_Len(t *testing.T) {
 	bm := NewConcurrent[string, int, string]()
-
-	if !bm.Empty() {
-		t.Error("expected map to be empty")
-	}
-
-	err := bm.Put("keyA1", 1, "value1")
-	require.NoError(t, err)
-	if bm.Empty() {
-		t.Error("expected map to not be empty")
-	}
-
-	if bm.Size() != 1 {
-		t.Errorf("expected size 1, got %d", bm.Size())
-	}
+	assert.Equal(t, 0, bm.Len())
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	assert.Equal(t, 1, bm.Len())
 }
 
 func TestConcurrentBiKeyMap_Clear(t *testing.T) {
 	bm := NewConcurrent[string, int, string]()
-
-	err := bm.Put("keyA1", 1, "value1")
-	require.NoError(t, err)
-	err = bm.Put("keyA2", 2, "value2")
-	require.NoError(t, err)
-
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
 	bm.Clear()
-
-	if !bm.Empty() {
-		t.Error("expected map to be empty after clear")
-	}
-
-	if bm.Size() != 0 {
-		t.Errorf("expected size 0, got %d", bm.Size())
-	}
+	assert.Equal(t, 0, bm.Len())
 }
 
 func TestConcurrentBiKeyMap_Values(t *testing.T) {
 	bm := NewConcurrent[string, int, string]()
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	assert.ElementsMatch(t, []string{"value1", "value2"}, slices.Collect(bm.Values()))
+}
 
-	err := bm.Put("keyA1", 1, "value1")
-	require.NoError(t, err)
-	err = bm.Put("keyA2", 2, "value2")
-	require.NoError(t, err)
-
-	values := bm.Values()
-	assert.Len(t, values, 2)
-
-	// We get a list here, but as the map underneath has no order
-	// we need to check for contains and not equals list.
-	expectedValues := map[string]bool{"value1": true, "value2": true}
-	for _, value := range values {
-		assert.Contains(t, expectedValues, value)
+func TestConcurrentBiKeyMap_ValuesStopsEarly(t *testing.T) {
+	bm := NewConcurrent[string, int, string]()
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	count := 0
+	for range bm.Values() {
+		count++
+		break
 	}
+	assert.Equal(t, 1, count)
+}
+
+func TestConcurrentBiKeyMap_ValuesAllowsWritesInLoop(t *testing.T) {
+	bm := NewConcurrent[string, int, string]()
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	keyB := 100
+	for v := range bm.Values() {
+		bm.DeleteByKeyA("keyA" + strings.TrimPrefix(v, "value"))
+		keyB++
+		require.NoError(t, bm.Set("new"+v, keyB, v))
+	}
+	assert.ElementsMatch(t, []string{"value1", "value2"}, slices.Collect(bm.Values()))
+	_, ok := bm.GetByKeyA("keyA1")
+	assert.False(t, ok)
 }
 
 func TestConcurrentBiKeyMap_ConcurrentAccess(t *testing.T) {
@@ -197,31 +188,29 @@ func TestConcurrentBiKeyMap_ConcurrentAccess(t *testing.T) {
 	// Concurrently remove values
 	for i := range numGoroutines {
 		wg.Add(1)
-		go concurrentRemove(t, i, &wg, bm)
+		go concurrentDelete(t, i, &wg, bm)
 	}
 
 	// Wait for all goroutines to finish
 	wg.Wait()
 }
 
-func TestConcurrentBiKeyMap_SizeAndEmptyDuringPut(t *testing.T) {
+func TestConcurrentBiKeyMap_LenDuringSet(t *testing.T) {
 	bm := NewConcurrent[string, int, string]()
 	var wg sync.WaitGroup
 	const numGoroutines = 100
 
 	for i := range numGoroutines {
 		wg.Go(func() {
-			assert.NoError(t, bm.Put(strconv.Itoa(i), i, "value"))
+			assert.NoError(t, bm.Set(strconv.Itoa(i), i, "value"))
 		})
 		wg.Go(func() {
-			_ = bm.Size()
-			_ = bm.Empty()
+			_ = bm.Len()
 		})
 	}
 	wg.Wait()
 
-	assert.Equal(t, numGoroutines, bm.Size())
-	assert.False(t, bm.Empty())
+	assert.Equal(t, numGoroutines, bm.Len())
 }
 
 func concurrentSet(t *testing.T, i int, wg *sync.WaitGroup, bm *ConcurrentBiKeyMap[string, int, string]) {
@@ -230,7 +219,7 @@ func concurrentSet(t *testing.T, i int, wg *sync.WaitGroup, bm *ConcurrentBiKeyM
 	keyA := fmt.Sprintf("keyA%d", i)
 	keyB := i
 	value := fmt.Sprintf("value%d", i)
-	if err := bm.Put(keyA, keyB, value); err != nil {
+	if err := bm.Set(keyA, keyB, value); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
@@ -248,14 +237,12 @@ func concurrentGet(t *testing.T, i int, wg *sync.WaitGroup, bm *ConcurrentBiKeyM
 	}
 }
 
-func concurrentRemove(t *testing.T, i int, wg *sync.WaitGroup, bm *ConcurrentBiKeyMap[string, int, string]) {
+func concurrentDelete(t *testing.T, i int, wg *sync.WaitGroup, bm *ConcurrentBiKeyMap[string, int, string]) {
 	t.Helper()
 	defer wg.Done()
 	keyA := fmt.Sprintf("keyA%d", i)
 	keyB := i
-	if err := bm.RemoveByKeyA(keyA); err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
+	bm.DeleteByKeyA(keyA)
 	if _, exists := bm.GetByKeyA(keyA); exists {
 		t.Errorf("expected keyA%d to be removed", i)
 	}
@@ -280,7 +267,7 @@ func BenchmarkConcurrentBiKeyMapGet(b *testing.B) {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
 			m := NewConcurrent[string, int, string]()
 			for n := range v.size {
-				_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
+				_ = m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
 			}
 			b.ResetTimer()
 			for range b.N {
@@ -293,31 +280,31 @@ func BenchmarkConcurrentBiKeyMapGet(b *testing.B) {
 	}
 }
 
-func BenchmarkConcurrentBiKeyMapPut(b *testing.B) {
+func BenchmarkConcurrentBiKeyMapSet(b *testing.B) {
 	for _, v := range benchmarkConcurrentSizes {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
 			m := NewConcurrent[string, int, string]()
 			b.ResetTimer()
 			for range b.N {
 				for n := range v.size {
-					_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
+					_ = m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
 				}
 			}
 		})
 	}
 }
 
-func BenchmarkConcurrentBiKeyMapRemove(b *testing.B) {
+func BenchmarkConcurrentBiKeyMapDelete(b *testing.B) {
 	for _, v := range benchmarkConcurrentSizes {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
 			m := NewConcurrent[string, int, string]()
 			for n := range v.size {
-				_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
+				_ = m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
 			}
 			b.ResetTimer()
 			for range b.N {
 				for n := range v.size {
-					_ = m.RemoveByKeyB(n)
+					m.DeleteByKeyB(n)
 				}
 			}
 		})

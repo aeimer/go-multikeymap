@@ -2,6 +2,7 @@ package bikeymap
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"testing"
 
@@ -11,7 +12,7 @@ import (
 
 func ExampleNew() {
 	bm := New[string, int, string]()
-	_ = bm.Put("keyA1", 1, "value1")
+	_ = bm.Set("keyA1", 1, "value1")
 	value, exists := bm.GetByKeyA("keyA1")
 	fmt.Printf("[Key A] value: %v, exists: %v\n", value, exists)
 	value, exists = bm.GetByKeyB(1)
@@ -24,7 +25,7 @@ func ExampleNew() {
 func TestBiKeyMap_SetAndGet(t *testing.T) {
 	bm := New[string, int, string]()
 
-	err := bm.Put("keyA1", 1, "value1")
+	err := bm.Set("keyA1", 1, "value1")
 	require.NoError(t, err)
 
 	value, exists := bm.GetByKeyA("keyA1")
@@ -41,23 +42,22 @@ func TestBiKeyMap_SetAndGet(t *testing.T) {
 func TestBiKeyMap_SetDuplicateKeys(t *testing.T) {
 	bm := New[string, int, string]()
 
-	err := bm.Put("keyA1", 1, "value1")
+	err := bm.Set("keyA1", 1, "value1")
 	require.NoError(t, err)
 
-	err = bm.Put("keyA2", 1, "value2")
+	err = bm.Set("keyA2", 1, "value2")
 	require.Error(t, err)
 
-	err = bm.Put("keyA1", 2, "value2")
+	err = bm.Set("keyA1", 2, "value2")
 	require.Error(t, err)
 }
 
-func TestBiKeyMap_RemoveByKeyA(t *testing.T) {
+func TestBiKeyMap_DeleteByKeyA(t *testing.T) {
 	bm := New[string, int, string]()
 
-	err := bm.Put("keyA1", 1, "value1")
+	err := bm.Set("keyA1", 1, "value1")
 	require.NoError(t, err)
-	err = bm.RemoveByKeyA("keyA1")
-	require.NoError(t, err)
+	bm.DeleteByKeyA("keyA1")
 
 	_, exists := bm.GetByKeyA("keyA1")
 	if exists {
@@ -70,13 +70,12 @@ func TestBiKeyMap_RemoveByKeyA(t *testing.T) {
 	}
 }
 
-func TestBiKeyMap_RemoveByKeyB(t *testing.T) {
+func TestBiKeyMap_DeleteByKeyB(t *testing.T) {
 	bm := New[string, int, string]()
 
-	err := bm.Put("keyA1", 1, "value1")
+	err := bm.Set("keyA1", 1, "value1")
 	require.NoError(t, err)
-	err = bm.RemoveByKeyB(1)
-	require.NoError(t, err)
+	bm.DeleteByKeyB(1)
 
 	_, exists := bm.GetByKeyA("keyA1")
 	if exists {
@@ -91,71 +90,67 @@ func TestBiKeyMap_RemoveByKeyB(t *testing.T) {
 
 func TestBiKeyMap_String(t *testing.T) {
 	bm := New[string, int, string]()
-	err := bm.Put("keyA1", 1, "value1")
+	err := bm.Set("keyA1", 1, "value1")
 	require.NoError(t, err)
 
 	expected := "BiKeyMap: map[keyA1:value1]"
 	assert.Equal(t, expected, bm.String())
 }
 
-func TestBiKeyMap_RemoveByKeyA_NotFound(t *testing.T) {
+func TestBiKeyMap_DeleteByKeyA_NotFound(t *testing.T) {
 	bm := New[string, int, string]()
-	err := bm.RemoveByKeyA("nonExistentKey")
-	require.Error(t, err)
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	bm.DeleteByKeyA("nonExistentKey")
+	assert.Equal(t, 1, bm.Len())
 }
 
-func TestBiKeyMap_RemoveByKeyB_NotFound(t *testing.T) {
+func TestBiKeyMap_DeleteByKeyB_NotFound(t *testing.T) {
 	bm := New[string, int, string]()
-	err := bm.RemoveByKeyB(999)
-	require.Error(t, err)
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	bm.DeleteByKeyB(999)
+	assert.Equal(t, 1, bm.Len())
 }
-func TestBiKeyMap_EmptyAndSize(t *testing.T) {
+func TestBiKeyMap_Len(t *testing.T) {
 	bm := New[string, int, string]()
-
-	if !bm.Empty() {
-		t.Error("expected map to be empty")
-	}
-
-	err := bm.Put("keyA1", 1, "value1")
-	require.NoError(t, err)
-	if bm.Empty() {
-		t.Error("expected map to not be empty")
-	}
-
-	assert.Equal(t, 1, bm.Size())
+	assert.Equal(t, 0, bm.Len())
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	assert.Equal(t, 1, bm.Len())
 }
 
 func TestBiKeyMap_Clear(t *testing.T) {
 	bm := New[string, int, string]()
-
-	err := bm.Put("keyA1", 1, "value1")
-	require.NoError(t, err)
-	err = bm.Put("keyA2", 2, "value2")
-	require.NoError(t, err)
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
 	bm.Clear()
+	assert.Equal(t, 0, bm.Len())
+}
 
-	if !bm.Empty() {
-		t.Error("expected map to be empty after clear")
+func TestBiKeyMap_ValuesReadsMapWhenIterationStarts(t *testing.T) {
+	bm := New[string, int, string]()
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	values := bm.Values()
+	bm.Clear()
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	assert.Equal(t, []string{"value2"}, slices.Collect(values))
+}
+
+func TestBiKeyMap_ValuesStopsEarly(t *testing.T) {
+	bm := New[string, int, string]()
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	count := 0
+	for range bm.Values() {
+		count++
+		break
 	}
-
-	assert.Equal(t, 0, bm.Size())
+	assert.Equal(t, 1, count)
 }
 
 func TestBiKeyMap_Values(t *testing.T) {
 	bm := New[string, int, string]()
-
-	err := bm.Put("keyA1", 1, "value1")
-	require.NoError(t, err)
-	err = bm.Put("keyA2", 2, "value2")
-	require.NoError(t, err)
-
-	values := bm.Values()
-	assert.Len(t, values, 2)
-
-	expectedValues := map[string]bool{"value1": true, "value2": true}
-	for _, value := range values {
-		assert.Contains(t, expectedValues, value)
-	}
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	assert.ElementsMatch(t, []string{"value1", "value2"}, slices.Collect(bm.Values()))
 }
 
 // Benchmarks
@@ -174,7 +169,7 @@ func BenchmarkBiKeyMapGet(b *testing.B) {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
 			m := New[string, int, string]()
 			for n := range v.size {
-				_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
+				_ = m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
 			}
 			b.ResetTimer()
 			for range b.N {
@@ -187,31 +182,31 @@ func BenchmarkBiKeyMapGet(b *testing.B) {
 	}
 }
 
-func BenchmarkBiKeyMapPut(b *testing.B) {
+func BenchmarkBiKeyMapSet(b *testing.B) {
 	for _, v := range benchmarkSizes {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
 			m := New[string, int, string]()
 			b.ResetTimer()
 			for range b.N {
 				for n := range v.size {
-					_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
+					_ = m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
 				}
 			}
 		})
 	}
 }
 
-func BenchmarkBiKeyMapRemove(b *testing.B) {
+func BenchmarkBiKeyMapDelete(b *testing.B) {
 	for _, v := range benchmarkSizes {
 		b.Run(fmt.Sprintf("size_%d", v.size), func(b *testing.B) {
 			m := New[string, int, string]()
 			for n := range v.size {
-				_ = m.Put(strconv.Itoa(n), n, strconv.Itoa(n))
+				_ = m.Set(strconv.Itoa(n), n, strconv.Itoa(n))
 			}
 			b.ResetTimer()
 			for range b.N {
 				for n := range v.size {
-					_ = m.RemoveByKeyB(n)
+					m.DeleteByKeyB(n)
 				}
 			}
 		})
