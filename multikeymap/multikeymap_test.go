@@ -430,6 +430,92 @@ func TestMultiKeyMap_UpdateWithoutKeepOnMissingKeyIsNoOp(t *testing.T) {
 	assert.Equal(t, 0, mm.Len())
 }
 
+func TestMultiKeyMap_DeleteSecondaryKey(t *testing.T) {
+	mm := New[string, int]()
+	mm.Set("key1", 1)
+	mm.Set("key2", 2)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1", "secKey2")
+	mm.AddSecondaryKeys("key2", "group1", "secKey3")
+
+	mm.DeleteSecondaryKey("group1", "secKey1")
+	assert.False(t, mm.HasSecondaryKey("group1", "secKey1"))
+	assert.True(t, mm.Has("key1"))
+	assert.Equal(t, map[string]map[string]string{"group1": {"secKey2": "key1", "secKey3": "key2"}}, mm.KeyGroups())
+
+	mm.DeleteSecondaryKey("group1", "secKey2")
+	assert.Empty(t, maps.Collect(mm.SecondaryKeys("key1")))
+	assert.Equal(t, map[string]map[string]string{"group1": {"secKey3": "key2"}}, mm.KeyGroups())
+
+	mm.DeleteSecondaryKey("group1", "secKey3")
+	assert.Empty(t, mm.KeyGroups())
+	assert.Empty(t, mm.secondaryTo)
+	assert.Equal(t, 2, mm.Len())
+}
+
+func TestMultiKeyMap_DeleteSecondaryKeyMissingIsNoOp(t *testing.T) {
+	var mm MultiKeyMap[string, int]
+	mm.DeleteSecondaryKey("group1", "secKey1")
+	mm.Set("key1", 1)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1")
+	mm.DeleteSecondaryKey("group1", "missing")
+	mm.DeleteSecondaryKey("missing", "secKey1")
+	assert.Equal(t, map[string]map[string]string{"group1": {"secKey1": "key1"}}, mm.KeyGroups())
+}
+
+func TestMultiKeyMap_DeleteGroup(t *testing.T) {
+	mm := New[string, int]()
+	mm.Set("key1", 1)
+	mm.Set("key2", 2)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1", "secKey2")
+	mm.AddSecondaryKeys("key1", "group2", "secKey1")
+	mm.AddSecondaryKeys("key2", "group1", "secKey3")
+
+	mm.DeleteGroup("group1")
+	assert.Equal(t, map[string]map[string]string{"group2": {"secKey1": "key1"}}, mm.KeyGroups())
+	assert.Equal(t, map[string]string{"group2": "secKey1"}, maps.Collect(mm.SecondaryKeys("key1")))
+	assert.Empty(t, maps.Collect(mm.SecondaryKeys("key2")))
+	assert.NotContains(t, mm.secondaryTo, "key2")
+	assert.Equal(t, 2, mm.Len())
+
+	mm.DeleteGroup("group2")
+	assert.Empty(t, mm.KeyGroups())
+	assert.Empty(t, mm.secondaryTo)
+}
+
+func TestMultiKeyMap_DeleteGroupMissingIsNoOp(t *testing.T) {
+	var mm MultiKeyMap[string, int]
+	mm.DeleteGroup("group1")
+	mm.Set("key1", 1)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1")
+	mm.DeleteGroup("missing")
+	assert.Equal(t, map[string]map[string]string{"group1": {"secKey1": "key1"}}, mm.KeyGroups())
+}
+
+func TestMultiKeyMap_DeleteBySecondaryKey(t *testing.T) {
+	mm := New[string, int]()
+	mm.Set("key1", 1)
+	mm.Set("key2", 2)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1", "secKey2")
+	mm.AddSecondaryKeys("key1", "group2", "secKey1")
+	mm.AddSecondaryKeys("key2", "group1", "secKey3")
+
+	mm.DeleteBySecondaryKey("group1", "secKey2")
+	assert.False(t, mm.Has("key1"))
+	assert.True(t, mm.Has("key2"))
+	assert.Equal(t, map[string]map[string]string{"group1": {"secKey3": "key2"}}, mm.KeyGroups())
+}
+
+func TestMultiKeyMap_DeleteBySecondaryKeyMissingIsNoOp(t *testing.T) {
+	var mm MultiKeyMap[string, int]
+	mm.DeleteBySecondaryKey("group1", "secKey1")
+	mm.Set("key1", 1)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1")
+	mm.DeleteBySecondaryKey("group1", "missing")
+	mm.DeleteBySecondaryKey("missing", "secKey1")
+	assert.True(t, mm.Has("key1"))
+	assert.True(t, mm.HasSecondaryKey("group1", "secKey1"))
+}
+
 // Benchmarks
 
 var benchmarkSizes = []struct {
