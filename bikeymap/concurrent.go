@@ -1,7 +1,6 @@
 package bikeymap
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 )
@@ -11,144 +10,80 @@ import (
 // Therefore, it is slower than BiKeyMap, but it is safe for concurrent use.
 type ConcurrentBiKeyMap[KeyA comparable, KeyB comparable, V any] struct {
 	mu sync.RWMutex
-	BiKeyMap[KeyA, KeyB, V]
+	m  BiKeyMap[KeyA, KeyB, V]
 }
 
 // NewConcurrent creates a new instance of ConcurrentBiKeyMap.
 func NewConcurrent[KeyA comparable, KeyB comparable, V any]() *ConcurrentBiKeyMap[KeyA, KeyB, V] {
-	return &ConcurrentBiKeyMap[KeyA, KeyB, V]{
-		BiKeyMap: BiKeyMap[KeyA, KeyB, V]{
-			dataByKeyA: make(map[KeyA]V),
-			keyAByKeyB: make(map[KeyB]KeyA),
-			keyBByKeyA: make(map[KeyA]KeyB),
-		},
-	}
+	return &ConcurrentBiKeyMap[KeyA, KeyB, V]{m: *New[KeyA, KeyB, V]()}
 }
 
 // Put stores a value with two keys. It only fails if one of the keys is already set without the other.
-func (m *ConcurrentBiKeyMap[KeyA, KeyB, V]) Put(keyA KeyA, keyB KeyB, value V) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	// Check if one key is set without the other, or if they do not point to each other.
-	if existingKeyA, keyBExists := m.keyAByKeyB[keyB]; keyBExists && existingKeyA != keyA {
-		return errors.New("keyB is already set with a different keyA")
-	}
-	if existingKeyB, keyAExists := m.keyBByKeyA[keyA]; keyAExists && existingKeyB != keyB {
-		return errors.New("keyA is already set with a different keyB")
-	}
-
-	// Put the new values for both keys.
-	m.dataByKeyA[keyA] = value
-	m.keyAByKeyB[keyB] = keyA
-	m.keyBByKeyA[keyA] = keyB
-	return nil
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Put(keyA KeyA, keyB KeyB, value V) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.m.Put(keyA, keyB, value)
 }
 
 // GetByKeyA retrieves a value using the first key.
-func (m *ConcurrentBiKeyMap[KeyA, KeyB, V]) GetByKeyA(keyA KeyA) (V, bool) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	value, exists := m.dataByKeyA[keyA]
-	return value, exists
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) GetByKeyA(keyA KeyA) (V, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.m.GetByKeyA(keyA)
 }
 
 // GetByKeyB retrieves a value using the second key.
-func (m *ConcurrentBiKeyMap[KeyA, KeyB, V]) GetByKeyB(keyB KeyB) (V, bool) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	keyA, exists := m.keyAByKeyB[keyB]
-	if !exists {
-		var zero V
-		return zero, false
-	}
-
-	value, exists := m.dataByKeyA[keyA]
-	return value, exists
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) GetByKeyB(keyB KeyB) (V, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.m.GetByKeyB(keyB)
 }
 
 // RemoveByKeyA removes a value using the first key, ensuring the corresponding second key is also deleted.
-func (m *ConcurrentBiKeyMap[KeyA, KeyB, V]) RemoveByKeyA(keyA KeyA) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	// Verify that keyA exists and retrieve the associated keyB.
-	keyB, ok := m.keyBByKeyA[keyA]
-	if !ok {
-		return errors.New("keyA does not exist")
-	}
-
-	// Remove keyA, keyB, and the associated value.
-	delete(m.dataByKeyA, keyA)
-	delete(m.keyAByKeyB, keyB)
-	delete(m.keyBByKeyA, keyA)
-
-	return nil
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) RemoveByKeyA(keyA KeyA) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.m.RemoveByKeyA(keyA)
 }
 
 // RemoveByKeyB removes a value using the second key, ensuring the corresponding first key is also deleted.
-func (m *ConcurrentBiKeyMap[KeyA, KeyB, V]) RemoveByKeyB(keyB KeyB) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	// Verify that keyB exists and retrieve the associated keyA.
-	keyA, ok := m.keyAByKeyB[keyB]
-	if !ok {
-		return errors.New("keyB does not exist")
-	}
-
-	// Remove keyA, keyB, and the associated value.
-	delete(m.dataByKeyA, keyA)
-	delete(m.keyAByKeyB, keyB)
-	delete(m.keyBByKeyA, keyA)
-
-	return nil
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) RemoveByKeyB(keyB KeyB) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.m.RemoveByKeyB(keyB)
 }
 
 // Empty checks if the map is empty.
-func (m *ConcurrentBiKeyMap[KeyA, KeyB, V]) Empty() bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	return len(m.dataByKeyA) == 0
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Empty() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.m.Empty()
 }
 
 // Size returns the number of elements in the map.
-func (m *ConcurrentBiKeyMap[KeyA, KeyB, V]) Size() int {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	return len(m.dataByKeyA)
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Size() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.m.Size()
 }
 
 // Values returns a slice of all values in the map.
-func (m *ConcurrentBiKeyMap[KeyA, KeyB, V]) Values() []V {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	values := make([]V, 0, len(m.dataByKeyA))
-	for _, value := range m.dataByKeyA {
-		values = append(values, value)
-	}
-	return values
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Values() []V {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.m.Values()
 }
 
 // Clear removes all elements from the map.
-func (m *ConcurrentBiKeyMap[KeyA, KeyB, V]) Clear() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.dataByKeyA = make(map[KeyA]V)
-	m.keyAByKeyB = make(map[KeyB]KeyA)
-	m.keyBByKeyA = make(map[KeyA]KeyB)
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Clear() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.m.Clear()
 }
 
 // String returns a string representation of the map.
-func (m *ConcurrentBiKeyMap[KeyA, KeyB, V]) String() string {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	return fmt.Sprintf("ConcurrentBiKeyMap: %v", m.dataByKeyA)
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) String() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return fmt.Sprintf("ConcurrentBiKeyMap: %v", c.m.dataByKeyA)
 }
