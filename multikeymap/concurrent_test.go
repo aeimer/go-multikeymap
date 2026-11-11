@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -381,6 +382,124 @@ func TestConcurrentMultiKeyMap_ZeroValueWrites(t *testing.T) {
 	mm.Set("key2", 2)
 	assert.True(t, mm.AddSecondaryKeys("key2", "group1", "secKey2"))
 	assert.Equal(t, map[string]map[string]string{"group1": {"secKey2": "key2"}}, mm.KeyGroups())
+}
+
+func TestConcurrentMultiKeyMap_LoadOrStore(t *testing.T) {
+	var mm ConcurrentMultiKeyMap[string, int]
+	actual, loaded := mm.LoadOrStore("key1", 1)
+	assert.False(t, loaded)
+	assert.Equal(t, 1, actual)
+
+	mm.AddSecondaryKeys("key1", "group1", "secKey1")
+	actual, loaded = mm.LoadOrStore("key1", 2)
+	assert.True(t, loaded)
+	assert.Equal(t, 1, actual)
+	value, _ := mm.GetBySecondaryKey("group1", "secKey1")
+	assert.Equal(t, 1, value)
+}
+
+func TestConcurrentMultiKeyMap_LoadAndDelete(t *testing.T) {
+	var mm ConcurrentMultiKeyMap[string, int]
+	_, loaded := mm.LoadAndDelete("key1")
+	assert.False(t, loaded)
+
+	mm.Set("key1", 1)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1")
+	value, loaded := mm.LoadAndDelete("key1")
+	assert.True(t, loaded)
+	assert.Equal(t, 1, value)
+	assert.False(t, mm.Has("key1"))
+	assert.False(t, mm.HasSecondaryKey("group1", "secKey1"))
+	assert.Empty(t, mm.KeyGroups())
+
+	_, loaded = mm.LoadAndDelete("key1")
+	assert.False(t, loaded)
+}
+
+func TestConcurrentMultiKeyMap_UpdateCreatesMissingKey(t *testing.T) {
+	var mm ConcurrentMultiKeyMap[string, int]
+	mm.Update("key1", func(old int, exists bool) (int, bool) {
+		assert.False(t, exists)
+		assert.Equal(t, 0, old)
+		return 1, true
+	})
+	value, ok := mm.Get("key1")
+	assert.True(t, ok)
+	assert.Equal(t, 1, value)
+}
+
+func TestConcurrentMultiKeyMap_UpdateReplacesValueAndKeepsSecondaryKeys(t *testing.T) {
+	mm := NewConcurrent[string, int]()
+	mm.Set("key1", 1)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1")
+	mm.Update("key1", func(old int, exists bool) (int, bool) {
+		assert.True(t, exists)
+		return old + 1, true
+	})
+	value, ok := mm.GetBySecondaryKey("group1", "secKey1")
+	assert.True(t, ok)
+	assert.Equal(t, 2, value)
+}
+
+func TestConcurrentMultiKeyMap_UpdateDeletesExistingKey(t *testing.T) {
+	mm := NewConcurrent[string, int]()
+	mm.Set("key1", 1)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1")
+	mm.Update("key1", func(int, bool) (int, bool) { return 0, false })
+	assert.False(t, mm.Has("key1"))
+	assert.False(t, mm.HasSecondaryKey("group1", "secKey1"))
+	assert.Empty(t, mm.KeyGroups())
+}
+
+func TestConcurrentMultiKeyMap_UpdateWithoutKeepOnMissingKeyIsNoOp(t *testing.T) {
+	var mm ConcurrentMultiKeyMap[string, int]
+	mm.Update("key1", func(int, bool) (int, bool) { return 1, false })
+	assert.False(t, mm.Has("key1"))
+	assert.Equal(t, 0, mm.Len())
+}
+
+func TestConcurrentMultiKeyMap_LoadOrStoreStoresOnce(t *testing.T) {
+	var mm ConcurrentMultiKeyMap[string, int]
+	var wg sync.WaitGroup
+	var stored atomic.Int32
+	for i := range 100 {
+		wg.Go(func() {
+			if _, loaded := mm.LoadOrStore("key1", i); !loaded {
+				stored.Add(1)
+			}
+		})
+	}
+	wg.Wait()
+	assert.Equal(t, int32(1), stored.Load())
+}
+
+func TestConcurrentMultiKeyMap_LoadAndDeleteLoadsOnce(t *testing.T) {
+	var mm ConcurrentMultiKeyMap[string, int]
+	mm.Set("key1", 1)
+	var wg sync.WaitGroup
+	var loadedCount atomic.Int32
+	for range 100 {
+		wg.Go(func() {
+			if _, loaded := mm.LoadAndDelete("key1"); loaded {
+				loadedCount.Add(1)
+			}
+		})
+	}
+	wg.Wait()
+	assert.Equal(t, int32(1), loadedCount.Load())
+}
+
+func TestConcurrentMultiKeyMap_UpdateIsAtomic(t *testing.T) {
+	var mm ConcurrentMultiKeyMap[string, int]
+	var wg sync.WaitGroup
+	for range 100 {
+		wg.Go(func() {
+			mm.Update("counter", func(old int, _ bool) (int, bool) { return old + 1, true })
+		})
+	}
+	wg.Wait()
+	value, _ := mm.Get("counter")
+	assert.Equal(t, 100, value)
 }
 
 // Benchmarks

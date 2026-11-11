@@ -110,6 +110,33 @@ func (m *BiKeyMap[KeyA, KeyB, V]) DeleteByKeyB(keyB KeyB) {
 	delete(m.byKeyB, keyB)
 }
 
+// LoadAndDeleteByKeyA removes the value stored under keyA and the paired keyB
+// and returns the previous value, if any.
+// The bool reports whether keyA existed.
+func (m *BiKeyMap[KeyA, KeyB, V]) LoadAndDeleteByKeyA(keyA KeyA) (V, bool) {
+	e, ok := m.byKeyA[keyA]
+	if ok {
+		delete(m.byKeyA, keyA)
+		delete(m.byKeyB, e.keyB)
+	}
+	return e.value, ok
+}
+
+// LoadAndDeleteByKeyB removes the value stored under keyB and the paired keyA
+// and returns the previous value, if any.
+// The bool reports whether keyB existed.
+func (m *BiKeyMap[KeyA, KeyB, V]) LoadAndDeleteByKeyB(keyB KeyB) (V, bool) {
+	keyA, ok := m.byKeyB[keyB]
+	if !ok {
+		var zero V
+		return zero, false
+	}
+	e := m.byKeyA[keyA]
+	delete(m.byKeyA, keyA)
+	delete(m.byKeyB, keyB)
+	return e.value, true
+}
+
 // Len returns the number of values in the map.
 func (m *BiKeyMap[KeyA, KeyB, V]) Len() int {
 	return len(m.byKeyA)

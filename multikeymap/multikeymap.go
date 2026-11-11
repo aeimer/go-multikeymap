@@ -150,6 +150,44 @@ func (m *MultiKeyMap[K, V]) Delete(primaryKey K) {
 	delete(m.secondaryTo, primaryKey)
 }
 
+// LoadOrStore returns the value of primaryKey if it exists.
+// Otherwise, it stores value under primaryKey and returns value.
+// The loaded result is true if the value was loaded, false if stored.
+func (m *MultiKeyMap[K, V]) LoadOrStore(primaryKey K, value V) (actual V, loaded bool) {
+	if actual, loaded := m.primary[primaryKey]; loaded {
+		return actual, true
+	}
+	m.Set(primaryKey, value)
+	return value, false
+}
+
+// LoadAndDelete removes primaryKey, its value and all its secondary keys
+// and returns the previous value, if any.
+// The loaded result reports whether primaryKey existed.
+func (m *MultiKeyMap[K, V]) LoadAndDelete(primaryKey K) (value V, loaded bool) {
+	value, loaded = m.primary[primaryKey]
+	if loaded {
+		m.Delete(primaryKey)
+	}
+	return value, loaded
+}
+
+// Update calls fn with the current value of primaryKey and whether it exists.
+// If fn returns true, Update stores the returned value under primaryKey;
+// it creates primaryKey if needed and keeps its existing secondary keys.
+// If fn returns false, Update deletes primaryKey and its secondary keys like Delete;
+// if primaryKey does not exist, nothing happens.
+func (m *MultiKeyMap[K, V]) Update(primaryKey K, fn func(old V, exists bool) (V, bool)) {
+	old, exists := m.primary[primaryKey]
+	value, keep := fn(old, exists)
+	switch {
+	case keep:
+		m.Set(primaryKey, value)
+	case exists:
+		m.Delete(primaryKey)
+	}
+}
+
 // Get returns a value by primary key.
 func (m *MultiKeyMap[K, V]) Get(primaryKey K) (V, bool) {
 	value, exists := m.primary[primaryKey]
