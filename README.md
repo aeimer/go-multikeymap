@@ -54,8 +54,22 @@ func main() {
   for name, city := range mm.All() {
     fmt.Println(name, city.Population)
   }
-  mm.Delete("Berlin")
-  mm.Len() // 0
+  // Atomic compound operations, also on the concurrent map.
+  mm.LoadOrStore("Hamburg", City{"Hamburg", 1_800_000}) // City{"Hamburg", 1_800_000}, false
+  mm.Update("Hamburg", func(old City, exists bool) (City, bool) {
+    old.Population += 1_000
+    return old, true // false deletes the entry
+  })
+
+  c := mm.Clone() // independent copy; values are copied by assignment
+  c.DeleteFunc(func(name string, city City) bool { return city.Population < 2_000_000 })
+
+  mm.DeleteSecondaryKey("postcode", "10119") // keep Berlin, drop one key
+  mm.DeleteGroup("postcode")                 // drop all postcodes
+  mm.DeleteBySecondaryKey("plate", "HH")     // no-op: the key does not exist
+  value, ok := mm.LoadAndDelete("Berlin")    // City{"Berlin", 3_500_000}, true
+  fmt.Println(value, ok)
+  mm.Len() // 1
 }
 ```
 
@@ -134,7 +148,11 @@ func main() {
     fmt.Println(name)
   }
   bm.DeleteByKeyB(1_800_000)
-  bm.Len() // 1
+  bm.LoadAndDeleteByKeyA("Berlin") // City{"Berlin", 3_500_000}, true
+
+  c := bm.Clone() // independent copy; values are copied by assignment
+  c.DeleteFunc(func(name string, population int, city City) bool { return population < 1_000_000 })
+  bm.Len() // 0
 }
 ```
 
