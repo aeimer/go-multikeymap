@@ -2,6 +2,7 @@ package multikeymap
 
 import (
 	"fmt"
+	"iter"
 )
 
 // MultiKeyMap is a generic in-memory map with a primary key and multiple secondary keys.
@@ -22,16 +23,17 @@ func New[K comparable, V any]() *MultiKeyMap[K, V] {
 	}
 }
 
-// Put inserts a value with a primary key.
-func (m *MultiKeyMap[K, V]) Put(primaryKey K, value V) {
+// Set stores value under primaryKey.
+// If primaryKey exists, Set replaces its value and keeps its secondary keys.
+func (m *MultiKeyMap[K, V]) Set(primaryKey K, value V) {
 	m.primary[primaryKey] = value
 }
 
-// PutSecondaryKeys adds secondary keys under a group for a primary key.
+// AddSecondaryKeys adds secondary keys under a group for a primary key.
 // It reports false and changes nothing if the primary key does not exist.
 // A secondary key that already belongs to another primary key in the same group
 // moves to primaryKey; the other primary key loses it.
-func (m *MultiKeyMap[K, V]) PutSecondaryKeys(primaryKey K, group string, keys ...string) bool {
+func (m *MultiKeyMap[K, V]) AddSecondaryKeys(primaryKey K, group string, keys ...string) bool {
 	if _, exists := m.primary[primaryKey]; !exists {
 		return false
 	}
@@ -72,8 +74,8 @@ func (m *MultiKeyMap[K, V]) removeReverseEntry(primaryKey K, group string, key s
 	}
 }
 
-// HasPrimaryKey checks if a primary key exists.
-func (m *MultiKeyMap[K, V]) HasPrimaryKey(primaryKey K) bool {
+// Has reports whether primaryKey exists.
+func (m *MultiKeyMap[K, V]) Has(primaryKey K) bool {
 	_, exists := m.primary[primaryKey]
 	return exists
 }
@@ -87,10 +89,10 @@ func (m *MultiKeyMap[K, V]) HasSecondaryKey(group string, key string) bool {
 	return false
 }
 
-// GetAllKeyGroups returns a copy of all key groups,
+// KeyGroups returns a copy of all key groups,
 // mapping group to secondary key to primary key.
 // Changes to the result do not affect the map.
-func (m *MultiKeyMap[K, V]) GetAllKeyGroups() map[string]map[string]K {
+func (m *MultiKeyMap[K, V]) KeyGroups() map[string]map[string]K {
 	result := make(map[string]map[string]K)
 	for group, keys := range m.secondary {
 		result[group] = make(map[string]K)
@@ -101,8 +103,9 @@ func (m *MultiKeyMap[K, V]) GetAllKeyGroups() map[string]map[string]K {
 	return result
 }
 
-// Remove removes a primary key and its associated secondary keys.
-func (m *MultiKeyMap[K, V]) Remove(primaryKey K) {
+// Delete removes primaryKey, its value and all its secondary keys.
+// If primaryKey does not exist, Delete is a no-op.
+func (m *MultiKeyMap[K, V]) Delete(primaryKey K) {
 	delete(m.primary, primaryKey)
 	groups, exists := m.secondaryTo[primaryKey]
 	if !exists {
@@ -138,23 +141,21 @@ func (m *MultiKeyMap[K, V]) GetBySecondaryKey(group string, key string) (V, bool
 	return *new(V), false
 }
 
-// Size returns the number of primary keys in the map.
-func (m *MultiKeyMap[K, V]) Size() int {
+// Len returns the number of primary keys in the map.
+func (m *MultiKeyMap[K, V]) Len() int {
 	return len(m.primary)
 }
 
-// Empty checks if the map is empty.
-func (m *MultiKeyMap[K, V]) Empty() bool {
-	return len(m.primary) == 0
-}
-
-// Values returns a slice of all values in the map.
-func (m *MultiKeyMap[K, V]) Values() []V {
-	values := make([]V, 0, len(m.primary))
-	for _, value := range m.primary {
-		values = append(values, value)
+// Values returns an iterator over all values in the map.
+// The iteration order is unspecified, like for a Go map.
+func (m *MultiKeyMap[K, V]) Values() iter.Seq[V] {
+	return func(yield func(V) bool) {
+		for _, v := range m.primary {
+			if !yield(v) {
+				return
+			}
+		}
 	}
-	return values
 }
 
 // Clear removes all elements from the map.

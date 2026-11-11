@@ -34,8 +34,8 @@ func main() {
 	}
 	mm := multikeymap.New[string, City]()
 	// or: mm := multikeymap.NewConcurrent[string, City]()
-	mm.Put("Berlin", City{"Berlin", 3_500_000})
-	mm.PutSecondaryKeys("Berlin", "postcode", "10115", "10117", "10119")
+	mm.Set("Berlin", City{"Berlin", 3_500_000})
+	mm.AddSecondaryKeys("Berlin", "postcode", "10115", "10117", "10119")
 	mm.Get("Berlin")                          // City{"Berlin", 3_500_000}
 	mm.GetBySecondaryKey("postcode", "10115") // City{"Berlin", 3_500_000}
 }
