@@ -6,6 +6,12 @@ import (
 	"iter"
 )
 
+// ErrKeyAConflict is returned by Set when keyA is already paired with a different keyB.
+var ErrKeyAConflict = errors.New("bikeymap: keyA is paired with a different keyB")
+
+// ErrKeyBConflict is returned by Set when keyB is already paired with a different keyA.
+var ErrKeyBConflict = errors.New("bikeymap: keyB is paired with a different keyA")
+
 // BiKeyMap is a generic in-memory map with two independent keys for each value.
 // The zero value is an empty map ready to use.
 // A BiKeyMap is not safe for concurrent use; use ConcurrentBiKeyMap instead.
@@ -22,15 +28,17 @@ func New[KeyA comparable, KeyB comparable, V any]() *BiKeyMap[KeyA, KeyB, V] {
 }
 
 // Set stores value under keyA and keyB and pairs the two keys.
-// It returns an error and changes nothing if keyA or keyB is already paired with a different key.
+// If keyB is already paired with a different keyA, Set returns ErrKeyBConflict.
+// Otherwise, if keyA is already paired with a different keyB, Set returns ErrKeyAConflict.
+// On an error Set changes nothing.
 // If both keys are already paired with each other, Set replaces the value.
 func (m *BiKeyMap[KeyA, KeyB, V]) Set(keyA KeyA, keyB KeyB, value V) error {
 	// Check if one key is set without the other, or if they do not point to each other.
 	if existingKeyA, keyBExists := m.keyAByKeyB[keyB]; keyBExists && existingKeyA != keyA {
-		return errors.New("keyB is already set with a different keyA")
+		return ErrKeyBConflict
 	}
 	if existingKeyB, keyAExists := m.keyBByKeyA[keyA]; keyAExists && existingKeyB != keyB {
-		return errors.New("keyA is already set with a different keyB")
+		return ErrKeyAConflict
 	}
 
 	// Store the value and pair both keys.

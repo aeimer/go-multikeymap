@@ -24,7 +24,9 @@ func NewConcurrent[KeyA comparable, KeyB comparable, V any]() *ConcurrentBiKeyMa
 }
 
 // Set stores value under keyA and keyB and pairs the two keys.
-// It returns an error and changes nothing if keyA or keyB is already paired with a different key.
+// If keyB is already paired with a different keyA, Set returns ErrKeyBConflict.
+// Otherwise, if keyA is already paired with a different keyB, Set returns ErrKeyAConflict.
+// On an error Set changes nothing.
 // If both keys are already paired with each other, Set replaces the value.
 func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Set(keyA KeyA, keyB KeyB, value V) error {
 	c.mu.Lock()

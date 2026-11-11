@@ -46,11 +46,22 @@ func TestBiKeyMap_SetDuplicateKeys(t *testing.T) {
 	err := bm.Set("keyA1", 1, "value1")
 	require.NoError(t, err)
 
+	// keyB 1 is already paired with keyA1.
 	err = bm.Set("keyA2", 1, "value2")
-	require.Error(t, err)
+	require.ErrorIs(t, err, ErrKeyBConflict)
+	require.EqualError(t, err, "bikeymap: keyB is paired with a different keyA")
 
+	// keyA1 is already paired with keyB 1.
 	err = bm.Set("keyA1", 2, "value2")
-	require.Error(t, err)
+	require.ErrorIs(t, err, ErrKeyAConflict)
+	require.EqualError(t, err, "bikeymap: keyA is paired with a different keyB")
+
+	// Both keys conflict: the keyB conflict is reported.
+	require.NoError(t, bm.Set("keyA3", 3, "value3"))
+	err = bm.Set("keyA1", 3, "value4")
+	require.ErrorIs(t, err, ErrKeyBConflict)
+
+	assert.Equal(t, map[string]string{"keyA1": "value1", "keyA3": "value3"}, maps.Collect(bm.All()))
 }
 
 func TestBiKeyMap_DeleteByKeyA(t *testing.T) {
