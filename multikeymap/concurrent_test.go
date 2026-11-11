@@ -588,6 +588,96 @@ func TestConcurrentMultiKeyMap_DeleteBySecondaryKeyMissingIsNoOp(t *testing.T) {
 	assert.True(t, mm.HasSecondaryKey("group1", "secKey1"))
 }
 
+func TestConcurrentMultiKeyMap_Clone(t *testing.T) {
+	mm := NewConcurrent[string, int]()
+	mm.Set("key1", 1)
+	mm.Set("key2", 2)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1", "secKey2")
+	mm.AddSecondaryKeys("key2", "group2", "secKey3")
+
+	clone := mm.Clone()
+	assert.Equal(t, maps.Collect(mm.All()), maps.Collect(clone.All()))
+	assert.Equal(t, mm.KeyGroups(), clone.KeyGroups())
+
+	// Changes to the clone and to the original stay apart.
+	clone.Set("key1", 10)
+	clone.Set("key3", 3)
+	clone.AddSecondaryKeys("key3", "group1", "secKey4")
+	clone.DeleteSecondaryKey("group1", "secKey1")
+	clone.DeleteGroup("group2")
+	mm.AddSecondaryKeys("key2", "group2", "secKey5")
+
+	assert.Equal(t, map[string]int{"key1": 1, "key2": 2}, maps.Collect(mm.All()))
+	assert.Equal(t, map[string]map[string]string{
+		"group1": {"secKey1": "key1", "secKey2": "key1"},
+		"group2": {"secKey3": "key2", "secKey5": "key2"},
+	}, mm.KeyGroups())
+	assert.Equal(t, map[string]int{"key1": 10, "key2": 2, "key3": 3}, maps.Collect(clone.All()))
+	assert.Equal(t, map[string]map[string]string{
+		"group1": {"secKey2": "key1", "secKey4": "key3"},
+	}, clone.KeyGroups())
+
+	// The reverse index of the original is not shared either.
+	mm.Delete("key1")
+	assert.Equal(t, map[string]string{"group1": "secKey2"}, maps.Collect(clone.SecondaryKeys("key1")))
+	assert.Empty(t, maps.Collect(clone.SecondaryKeys("key2")))
+}
+
+func TestConcurrentMultiKeyMap_CloneCopiesValuesShallowly(t *testing.T) {
+	mm := NewConcurrent[string, *int]()
+	value := 1
+	mm.Set("key1", &value)
+	clone := mm.Clone()
+	got, _ := clone.Get("key1")
+	assert.Same(t, &value, got)
+}
+
+func TestConcurrentMultiKeyMap_CloneZeroValue(t *testing.T) {
+	var mm ConcurrentMultiKeyMap[string, int]
+	clone := mm.Clone()
+	assert.Equal(t, 0, clone.Len())
+	clone.Set("key1", 1)
+	assert.True(t, clone.AddSecondaryKeys("key1", "group1", "secKey1"))
+	assert.Equal(t, 0, mm.Len())
+	assert.Empty(t, mm.KeyGroups())
+}
+
+func TestConcurrentMultiKeyMap_DeleteFunc(t *testing.T) {
+	mm := NewConcurrent[string, int]()
+	for i := range 4 {
+		key := "key" + strconv.Itoa(i)
+		mm.Set(key, i)
+		mm.AddSecondaryKeys(key, "group1", "secKey"+strconv.Itoa(i))
+	}
+	mm.DeleteFunc(func(key string, value int) bool { return value%2 == 1 })
+	assert.Equal(t, map[string]int{"key0": 0, "key2": 2}, maps.Collect(mm.All()))
+	assert.Equal(t, map[string]map[string]string{
+		"group1": {"secKey0": "key0", "secKey2": "key2"},
+	}, mm.KeyGroups())
+	assert.NotContains(t, mm.m.secondaryTo, "key1")
+	assert.NotContains(t, mm.m.secondaryTo, "key3")
+}
+
+func TestConcurrentMultiKeyMap_DeleteFuncZeroValue(t *testing.T) {
+	var mm ConcurrentMultiKeyMap[string, int]
+	mm.DeleteFunc(func(string, int) bool { return true })
+	assert.Equal(t, 0, mm.Len())
+}
+
+func TestConcurrentMultiKeyMap_CloneHasOwnLock(t *testing.T) {
+	var mm ConcurrentMultiKeyMap[string, int]
+	mm.Set("key1", 1)
+	clone := mm.Clone()
+	requireNoDeadlock(t, func() {
+		mm.Update("key1", func(old int, _ bool) (int, bool) {
+			clone.Set("key2", 2)
+			return old, true
+		})
+	})
+	assert.Equal(t, 2, clone.Len())
+	assert.Equal(t, 1, mm.Len())
+}
+
 // Benchmarks
 
 var benchmarkConcurrentSizes = []struct {
