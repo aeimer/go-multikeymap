@@ -1,12 +1,15 @@
 package bikeymap
 
 import (
+	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -160,6 +163,81 @@ func TestConcurrentBiKeyMap_ValuesAllowsWritesInLoop(t *testing.T) {
 	assert.ElementsMatch(t, []string{"value1", "value2"}, slices.Collect(bm.Values()))
 	_, ok := bm.GetByKeyA("keyA1")
 	assert.False(t, ok)
+}
+
+func TestConcurrentBiKeyMap_All(t *testing.T) {
+	bm := NewConcurrent[string, int, string]()
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	assert.Equal(t, map[string]string{"keyA1": "value1", "keyA2": "value2"}, maps.Collect(bm.All()))
+}
+
+func TestConcurrentBiKeyMap_Keys(t *testing.T) {
+	bm := NewConcurrent[string, int, string]()
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	assert.ElementsMatch(t, []string{"keyA1", "keyA2"}, slices.Collect(bm.KeysA()))
+	assert.ElementsMatch(t, []int{1, 2}, slices.Collect(bm.KeysB()))
+}
+
+func TestConcurrentBiKeyMap_IteratorsStopEarly(t *testing.T) {
+	bm := NewConcurrent[string, int, string]()
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	count := 0
+	for range bm.All() {
+		count++
+		break
+	}
+	for range bm.KeysA() {
+		count++
+		break
+	}
+	for range bm.KeysB() {
+		count++
+		break
+	}
+	assert.Equal(t, 3, count)
+}
+
+func TestConcurrentBiKeyMap_IteratorsAllowWritesInLoop(t *testing.T) {
+	bm := NewConcurrent[string, int, string]()
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	var errs []error
+	requireNoDeadlock(t, func() {
+		for keyA, v := range bm.All() {
+			bm.DeleteByKeyA(keyA)
+			errs = append(errs, bm.Set("all", 2, v))
+		}
+		for keyA := range bm.KeysA() {
+			bm.DeleteByKeyA(keyA)
+			errs = append(errs, bm.Set("keysA", 3, "value3"))
+		}
+		for keyB := range bm.KeysB() {
+			bm.DeleteByKeyB(keyB)
+			errs = append(errs, bm.Set("keysB", 4, "value4"))
+		}
+		for v := range bm.Values() {
+			errs = append(errs, bm.Set("keysB", 4, v+"!"))
+		}
+	})
+	require.NoError(t, errors.Join(errs...))
+	assert.Equal(t, map[string]string{"keysB": "value4!"}, maps.Collect(bm.All()))
+}
+
+// requireNoDeadlock fails the test if f does not return within a second.
+func requireNoDeadlock(t *testing.T, f func()) {
+	t.Helper()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		f()
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("deadlock: loop body could not write to the map")
+	}
 }
 
 func TestConcurrentBiKeyMap_ConcurrentAccess(t *testing.T) {

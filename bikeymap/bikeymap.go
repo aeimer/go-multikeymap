@@ -92,6 +92,42 @@ func (m *BiKeyMap[KeyA, KeyB, V]) Len() int {
 	return len(m.dataByKeyA)
 }
 
+// All returns an iterator over all keyA keys and their values.
+// The iteration order is unspecified, like for a Go map.
+func (m *BiKeyMap[KeyA, KeyB, V]) All() iter.Seq2[KeyA, V] {
+	return func(yield func(KeyA, V) bool) {
+		for keyA, v := range m.dataByKeyA {
+			if !yield(keyA, v) {
+				return
+			}
+		}
+	}
+}
+
+// KeysA returns an iterator over all keyA keys.
+// The iteration order is unspecified, like for a Go map.
+func (m *BiKeyMap[KeyA, KeyB, V]) KeysA() iter.Seq[KeyA] {
+	return func(yield func(KeyA) bool) {
+		for keyA := range m.dataByKeyA {
+			if !yield(keyA) {
+				return
+			}
+		}
+	}
+}
+
+// KeysB returns an iterator over all keyB keys.
+// The iteration order is unspecified, like for a Go map.
+func (m *BiKeyMap[KeyA, KeyB, V]) KeysB() iter.Seq[KeyB] {
+	return func(yield func(KeyB) bool) {
+		for keyB := range m.keyAByKeyB {
+			if !yield(keyB) {
+				return
+			}
+		}
+	}
+}
+
 // Values returns an iterator over all values in the map.
 // The iteration order is unspecified, like for a Go map.
 func (m *BiKeyMap[KeyA, KeyB, V]) Values() iter.Seq[V] {

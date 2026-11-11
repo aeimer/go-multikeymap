@@ -94,21 +94,28 @@ func (c *ConcurrentMultiKeyMap[K, V]) Len() int {
 	return c.m.Len()
 }
 
+// All returns an iterator over all primary keys and their values.
+// The iteration order is unspecified, like for a Go map.
+// Each iteration sees a snapshot taken when it starts and holds no lock while it runs,
+// so the loop body may modify the map.
+func (c *ConcurrentMultiKeyMap[K, V]) All() iter.Seq2[K, V] {
+	return snapshot2(&c.mu, c.m.All)
+}
+
+// Keys returns an iterator over all primary keys.
+// The iteration order is unspecified, like for a Go map.
+// Each iteration sees a snapshot taken when it starts and holds no lock while it runs,
+// so the loop body may modify the map.
+func (c *ConcurrentMultiKeyMap[K, V]) Keys() iter.Seq[K] {
+	return snapshot(&c.mu, c.m.Keys)
+}
+
 // Values returns an iterator over all values in the map.
 // The iteration order is unspecified, like for a Go map.
 // Each iteration sees a snapshot taken when it starts and holds no lock while it runs,
 // so the loop body may modify the map.
 func (c *ConcurrentMultiKeyMap[K, V]) Values() iter.Seq[V] {
-	return func(yield func(V) bool) {
-		c.mu.RLock()
-		values := slices.Collect(c.m.Values())
-		c.mu.RUnlock()
-		for _, v := range values {
-			if !yield(v) {
-				return
-			}
-		}
-	}
+	return snapshot(&c.mu, c.m.Values)
 }
 
 // Clear removes all elements from the map.
@@ -123,4 +130,40 @@ func (c *ConcurrentMultiKeyMap[K, V]) String() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return fmt.Sprintf("ConcurrentMultiKeyMap: %v", c.m.primary)
+}
+
+// snapshot returns an iterator that, when iteration starts, collects seq() under the read lock
+// and then yields the copy without holding the lock.
+func snapshot[T any](mu *sync.RWMutex, seq func() iter.Seq[T]) iter.Seq[T] {
+	return func(yield func(T) bool) {
+		mu.RLock()
+		items := slices.Collect(seq())
+		mu.RUnlock()
+		for _, item := range items {
+			if !yield(item) {
+				return
+			}
+		}
+	}
+}
+
+// snapshot2 is snapshot for iter.Seq2.
+func snapshot2[K, V any](mu *sync.RWMutex, seq func() iter.Seq2[K, V]) iter.Seq2[K, V] {
+	type pair struct {
+		k K
+		v V
+	}
+	return func(yield func(K, V) bool) {
+		mu.RLock()
+		var items []pair
+		for k, v := range seq() {
+			items = append(items, pair{k, v})
+		}
+		mu.RUnlock()
+		for _, p := range items {
+			if !yield(p.k, p.v) {
+				return
+			}
+		}
+	}
 }
