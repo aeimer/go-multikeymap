@@ -1,3 +1,10 @@
+// Package bikeymap provides a map with two unique keys per value,
+// a bidirectional map that also carries a value.
+//
+// Each keyA is paired with exactly one keyB, and a value can be looked up by
+// either key in O(1).
+// BiKeyMap is not safe for concurrent use; ConcurrentBiKeyMap is.
+// The zero value of both types is an empty map ready to use.
 package bikeymap
 
 import (
