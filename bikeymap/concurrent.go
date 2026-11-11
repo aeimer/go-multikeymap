@@ -1,7 +1,6 @@
 package bikeymap
 
 import (
-	"fmt"
 	"iter"
 	"slices"
 	"sync"
@@ -130,7 +129,7 @@ func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Clear() {
 func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) String() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return fmt.Sprintf("ConcurrentBiKeyMap: %v", c.m.dataByKeyA)
+	return "ConcurrentBiKeyMap: " + c.m.format()
 }
 
 // snapshot returns an iterator that, when iteration starts, collects seq() under the read lock
