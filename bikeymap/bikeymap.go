@@ -224,14 +224,14 @@ func (m *BiKeyMap[KeyA, KeyB, V]) Clear() {
 
 // String returns a string representation of the map.
 func (m *BiKeyMap[KeyA, KeyB, V]) String() string {
-	return "BiKeyMap: " + m.format()
+	return fmt.Sprint("BiKeyMap: ", m.values())
 }
 
-// format formats keyA and values like a map[KeyA]V.
-func (m *BiKeyMap[KeyA, KeyB, V]) format() string {
+// values returns a new map[KeyA]V, which fmt prints sorted by key.
+func (m *BiKeyMap[KeyA, KeyB, V]) values() map[KeyA]V {
 	values := make(map[KeyA]V, len(m.byKeyA))
 	for keyA, e := range m.byKeyA {
 		values[keyA] = e.value
 	}
-	return fmt.Sprint(values)
+	return values
 }

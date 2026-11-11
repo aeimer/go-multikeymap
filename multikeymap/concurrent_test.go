@@ -995,3 +995,34 @@ func BenchmarkConcurrentMultiKeyMapDelete(b *testing.B) {
 		})
 	}
 }
+
+// reentrantValue calls back into its map from String,
+// while a writer waits for the lock.
+type reentrantValue struct {
+	m *ConcurrentMultiKeyMap[string, reentrantValue]
+}
+
+func (v reentrantValue) String() string {
+	go v.m.Set("writer", reentrantValue{})
+	// Give the writer time to block on the lock, if String holds it.
+	time.Sleep(20 * time.Millisecond)
+	return strconv.Itoa(v.m.Len())
+}
+
+func TestConcurrentMultiKeyMap_String_ValueCallsBack(t *testing.T) {
+	// given
+	mm := NewConcurrent[string, reentrantValue]()
+	mm.Set("self", reentrantValue{m: mm})
+
+	// when
+	done := make(chan string)
+	go func() { done <- mm.String() }()
+
+	// then
+	select {
+	case s := <-done:
+		assert.Contains(t, s, "ConcurrentMultiKeyMap: map[self:")
+	case <-time.After(2 * time.Second):
+		t.Fatal("String deadlocked")
+	}
+}
