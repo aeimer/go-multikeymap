@@ -2,6 +2,8 @@ package multikeymap
 
 import (
 	"fmt"
+	"iter"
+	"slices"
 	"sync"
 )
 
@@ -18,28 +20,29 @@ func NewConcurrent[K comparable, V any]() *ConcurrentMultiKeyMap[K, V] {
 	return &ConcurrentMultiKeyMap[K, V]{m: *New[K, V]()}
 }
 
-// Put inserts a value with a primary key.
-func (c *ConcurrentMultiKeyMap[K, V]) Put(primaryKey K, value V) {
+// Set stores value under primaryKey.
+// If primaryKey exists, Set replaces its value and keeps its secondary keys.
+func (c *ConcurrentMultiKeyMap[K, V]) Set(primaryKey K, value V) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.m.Put(primaryKey, value)
+	c.m.Set(primaryKey, value)
 }
 
-// PutSecondaryKeys adds secondary keys under a group for a primary key.
+// AddSecondaryKeys adds secondary keys under a group for a primary key.
 // It reports false and changes nothing if the primary key does not exist.
 // A secondary key that already belongs to another primary key in the same group
 // moves to primaryKey; the other primary key loses it.
-func (c *ConcurrentMultiKeyMap[K, V]) PutSecondaryKeys(primaryKey K, group string, keys ...string) bool {
+func (c *ConcurrentMultiKeyMap[K, V]) AddSecondaryKeys(primaryKey K, group string, keys ...string) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.m.PutSecondaryKeys(primaryKey, group, keys...)
+	return c.m.AddSecondaryKeys(primaryKey, group, keys...)
 }
 
-// HasPrimaryKey checks if a primary key exists.
-func (c *ConcurrentMultiKeyMap[K, V]) HasPrimaryKey(primaryKey K) bool {
+// Has reports whether primaryKey exists.
+func (c *ConcurrentMultiKeyMap[K, V]) Has(primaryKey K) bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.m.HasPrimaryKey(primaryKey)
+	return c.m.Has(primaryKey)
 }
 
 // HasSecondaryKey checks if a secondary key exists in a specific group.
@@ -49,20 +52,21 @@ func (c *ConcurrentMultiKeyMap[K, V]) HasSecondaryKey(group string, key string) 
 	return c.m.HasSecondaryKey(group, key)
 }
 
-// GetAllKeyGroups returns a copy of all key groups,
+// KeyGroups returns a copy of all key groups,
 // mapping group to secondary key to primary key.
 // Changes to the result do not affect the map.
-func (c *ConcurrentMultiKeyMap[K, V]) GetAllKeyGroups() map[string]map[string]K {
+func (c *ConcurrentMultiKeyMap[K, V]) KeyGroups() map[string]map[string]K {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.m.GetAllKeyGroups()
+	return c.m.KeyGroups()
 }
 
-// Remove removes a primary key and its associated secondary keys.
-func (c *ConcurrentMultiKeyMap[K, V]) Remove(primaryKey K) {
+// Delete removes primaryKey, its value and all its secondary keys.
+// If primaryKey does not exist, Delete is a no-op.
+func (c *ConcurrentMultiKeyMap[K, V]) Delete(primaryKey K) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.m.Remove(primaryKey)
+	c.m.Delete(primaryKey)
 }
 
 // Get returns a value by primary key.
@@ -80,25 +84,28 @@ func (c *ConcurrentMultiKeyMap[K, V]) GetBySecondaryKey(group string, key string
 	return c.m.GetBySecondaryKey(group, key)
 }
 
-// Size returns the number of primary keys in the map.
-func (c *ConcurrentMultiKeyMap[K, V]) Size() int {
+// Len returns the number of primary keys in the map.
+func (c *ConcurrentMultiKeyMap[K, V]) Len() int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.m.Size()
+	return c.m.Len()
 }
 
-// Empty checks if the map is empty.
-func (c *ConcurrentMultiKeyMap[K, V]) Empty() bool {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.m.Empty()
-}
-
-// Values returns a slice of all values in the map.
-func (c *ConcurrentMultiKeyMap[K, V]) Values() []V {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.m.Values()
+// Values returns an iterator over all values in the map.
+// The iteration order is unspecified, like for a Go map.
+// Each iteration sees a snapshot taken when it starts and holds no lock while it runs,
+// so the loop body may modify the map.
+func (c *ConcurrentMultiKeyMap[K, V]) Values() iter.Seq[V] {
+	return func(yield func(V) bool) {
+		c.mu.RLock()
+		values := slices.Collect(c.m.Values())
+		c.mu.RUnlock()
+		for _, v := range values {
+			if !yield(v) {
+				return
+			}
+		}
+	}
 }
 
 // Clear removes all elements from the map.
