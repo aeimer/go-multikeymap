@@ -14,23 +14,24 @@ import (
 )
 
 // BiKeyMap is a generic in-memory map with two independent keys for each value.
+// A is the type of keyA, B the type of keyB.
 // The zero value is an empty map ready to use.
 // A BiKeyMap is not safe for concurrent use; use ConcurrentBiKeyMap instead.
-type BiKeyMap[KeyA comparable, KeyB comparable, V any] struct {
-	byKeyA map[KeyA]entry[KeyB, V]
-	byKeyB map[KeyB]KeyA
+type BiKeyMap[A comparable, B comparable, V any] struct {
+	byKeyA map[A]entry[B, V]
+	byKeyB map[B]A
 }
 
 // entry holds the value of a keyA together with its paired keyB.
-type entry[KeyB comparable, V any] struct {
-	keyB  KeyB
+type entry[B comparable, V any] struct {
+	keyB  B
 	value V
 }
 
 // New returns a new empty BiKeyMap.
-// It is equivalent to new(BiKeyMap[KeyA, KeyB, V]).
-func New[KeyA comparable, KeyB comparable, V any]() *BiKeyMap[KeyA, KeyB, V] {
-	return new(BiKeyMap[KeyA, KeyB, V])
+// It is equivalent to new(BiKeyMap[A, B, V]).
+func New[A comparable, B comparable, V any]() *BiKeyMap[A, B, V] {
+	return new(BiKeyMap[A, B, V])
 }
 
 // Set stores value under keyA and keyB and pairs the two keys.
@@ -41,10 +42,10 @@ func New[KeyA comparable, KeyB comparable, V any]() *BiKeyMap[KeyA, KeyB, V] {
 // No key is ever left without its pair.
 // Len grows by one if both keys are new, shrinks by one if both cases above apply,
 // and stays the same otherwise.
-func (m *BiKeyMap[KeyA, KeyB, V]) Set(keyA KeyA, keyB KeyB, value V) {
+func (m *BiKeyMap[A, B, V]) Set(keyA A, keyB B, value V) {
 	if m.byKeyA == nil {
-		m.byKeyA = make(map[KeyA]entry[KeyB, V])
-		m.byKeyB = make(map[KeyB]KeyA)
+		m.byKeyA = make(map[A]entry[B, V])
+		m.byKeyB = make(map[B]A)
 	}
 	// Drop the other half of each conflicting pair; the half that shares a key
 	// with the new pair is overwritten below.
@@ -54,18 +55,18 @@ func (m *BiKeyMap[KeyA, KeyB, V]) Set(keyA KeyA, keyB KeyB, value V) {
 	if oldKeyA, exists := m.byKeyB[keyB]; exists && oldKeyA != keyA {
 		delete(m.byKeyA, oldKeyA)
 	}
-	m.byKeyA[keyA] = entry[KeyB, V]{keyB: keyB, value: value}
+	m.byKeyA[keyA] = entry[B, V]{keyB: keyB, value: value}
 	m.byKeyB[keyB] = keyA
 }
 
 // GetByKeyA retrieves a value using the first key.
-func (m *BiKeyMap[KeyA, KeyB, V]) GetByKeyA(keyA KeyA) (V, bool) {
+func (m *BiKeyMap[A, B, V]) GetByKeyA(keyA A) (V, bool) {
 	e, exists := m.byKeyA[keyA]
 	return e.value, exists
 }
 
 // GetByKeyB retrieves a value using the second key.
-func (m *BiKeyMap[KeyA, KeyB, V]) GetByKeyB(keyB KeyB) (V, bool) {
+func (m *BiKeyMap[A, B, V]) GetByKeyB(keyB B) (V, bool) {
 	keyA, exists := m.byKeyB[keyB]
 	if !exists {
 		var zero V
@@ -78,21 +79,21 @@ func (m *BiKeyMap[KeyA, KeyB, V]) GetByKeyB(keyB KeyB) (V, bool) {
 
 // KeyA returns the keyA paired with keyB.
 // The bool reports whether keyB exists.
-func (m *BiKeyMap[KeyA, KeyB, V]) KeyA(keyB KeyB) (KeyA, bool) {
+func (m *BiKeyMap[A, B, V]) KeyA(keyB B) (A, bool) {
 	keyA, exists := m.byKeyB[keyB]
 	return keyA, exists
 }
 
 // KeyB returns the keyB paired with keyA.
 // The bool reports whether keyA exists.
-func (m *BiKeyMap[KeyA, KeyB, V]) KeyB(keyA KeyA) (KeyB, bool) {
+func (m *BiKeyMap[A, B, V]) KeyB(keyA A) (B, bool) {
 	e, exists := m.byKeyA[keyA]
 	return e.keyB, exists
 }
 
 // DeleteByKeyA removes the value stored under keyA and the paired keyB.
 // If keyA does not exist, DeleteByKeyA is a no-op.
-func (m *BiKeyMap[KeyA, KeyB, V]) DeleteByKeyA(keyA KeyA) {
+func (m *BiKeyMap[A, B, V]) DeleteByKeyA(keyA A) {
 	e, ok := m.byKeyA[keyA]
 	if !ok {
 		return
@@ -103,7 +104,7 @@ func (m *BiKeyMap[KeyA, KeyB, V]) DeleteByKeyA(keyA KeyA) {
 
 // DeleteByKeyB removes the value stored under keyB and the paired keyA.
 // If keyB does not exist, DeleteByKeyB is a no-op.
-func (m *BiKeyMap[KeyA, KeyB, V]) DeleteByKeyB(keyB KeyB) {
+func (m *BiKeyMap[A, B, V]) DeleteByKeyB(keyB B) {
 	keyA, ok := m.byKeyB[keyB]
 	if !ok {
 		return
@@ -115,7 +116,7 @@ func (m *BiKeyMap[KeyA, KeyB, V]) DeleteByKeyB(keyB KeyB) {
 // LoadAndDeleteByKeyA removes the value stored under keyA and the paired keyB
 // and returns the previous value, if any.
 // The bool reports whether keyA existed.
-func (m *BiKeyMap[KeyA, KeyB, V]) LoadAndDeleteByKeyA(keyA KeyA) (V, bool) {
+func (m *BiKeyMap[A, B, V]) LoadAndDeleteByKeyA(keyA A) (V, bool) {
 	e, ok := m.byKeyA[keyA]
 	if ok {
 		delete(m.byKeyA, keyA)
@@ -127,7 +128,7 @@ func (m *BiKeyMap[KeyA, KeyB, V]) LoadAndDeleteByKeyA(keyA KeyA) (V, bool) {
 // LoadAndDeleteByKeyB removes the value stored under keyB and the paired keyA
 // and returns the previous value, if any.
 // The bool reports whether keyB existed.
-func (m *BiKeyMap[KeyA, KeyB, V]) LoadAndDeleteByKeyB(keyB KeyB) (V, bool) {
+func (m *BiKeyMap[A, B, V]) LoadAndDeleteByKeyB(keyB B) (V, bool) {
 	keyA, ok := m.byKeyB[keyB]
 	if !ok {
 		var zero V
@@ -140,14 +141,14 @@ func (m *BiKeyMap[KeyA, KeyB, V]) LoadAndDeleteByKeyB(keyB KeyB) (V, bool) {
 }
 
 // Len returns the number of values in the map.
-func (m *BiKeyMap[KeyA, KeyB, V]) Len() int {
+func (m *BiKeyMap[A, B, V]) Len() int {
 	return len(m.byKeyA)
 }
 
 // All returns an iterator over all keyA keys and their values.
 // The iteration order is unspecified, like for a Go map.
-func (m *BiKeyMap[KeyA, KeyB, V]) All() iter.Seq2[KeyA, V] {
-	return func(yield func(KeyA, V) bool) {
+func (m *BiKeyMap[A, B, V]) All() iter.Seq2[A, V] {
+	return func(yield func(A, V) bool) {
 		for keyA, e := range m.byKeyA {
 			if !yield(keyA, e.value) {
 				return
@@ -158,8 +159,8 @@ func (m *BiKeyMap[KeyA, KeyB, V]) All() iter.Seq2[KeyA, V] {
 
 // Pairs returns an iterator over all pairs of keyA and keyB.
 // The iteration order is unspecified, like for a Go map.
-func (m *BiKeyMap[KeyA, KeyB, V]) Pairs() iter.Seq2[KeyA, KeyB] {
-	return func(yield func(KeyA, KeyB) bool) {
+func (m *BiKeyMap[A, B, V]) Pairs() iter.Seq2[A, B] {
+	return func(yield func(A, B) bool) {
 		for keyA, e := range m.byKeyA {
 			if !yield(keyA, e.keyB) {
 				return
@@ -170,8 +171,8 @@ func (m *BiKeyMap[KeyA, KeyB, V]) Pairs() iter.Seq2[KeyA, KeyB] {
 
 // KeysA returns an iterator over all keyA keys.
 // The iteration order is unspecified, like for a Go map.
-func (m *BiKeyMap[KeyA, KeyB, V]) KeysA() iter.Seq[KeyA] {
-	return func(yield func(KeyA) bool) {
+func (m *BiKeyMap[A, B, V]) KeysA() iter.Seq[A] {
+	return func(yield func(A) bool) {
 		for keyA := range m.byKeyA {
 			if !yield(keyA) {
 				return
@@ -182,8 +183,8 @@ func (m *BiKeyMap[KeyA, KeyB, V]) KeysA() iter.Seq[KeyA] {
 
 // KeysB returns an iterator over all keyB keys.
 // The iteration order is unspecified, like for a Go map.
-func (m *BiKeyMap[KeyA, KeyB, V]) KeysB() iter.Seq[KeyB] {
-	return func(yield func(KeyB) bool) {
+func (m *BiKeyMap[A, B, V]) KeysB() iter.Seq[B] {
+	return func(yield func(B) bool) {
 		for keyB := range m.byKeyB {
 			if !yield(keyB) {
 				return
@@ -194,7 +195,7 @@ func (m *BiKeyMap[KeyA, KeyB, V]) KeysB() iter.Seq[KeyB] {
 
 // Values returns an iterator over all values in the map.
 // The iteration order is unspecified, like for a Go map.
-func (m *BiKeyMap[KeyA, KeyB, V]) Values() iter.Seq[V] {
+func (m *BiKeyMap[A, B, V]) Values() iter.Seq[V] {
 	return func(yield func(V) bool) {
 		for _, e := range m.byKeyA {
 			if !yield(e.value) {
@@ -205,7 +206,7 @@ func (m *BiKeyMap[KeyA, KeyB, V]) Values() iter.Seq[V] {
 }
 
 // DeleteFunc removes every value for which del returns true, together with its keyA and keyB.
-func (m *BiKeyMap[KeyA, KeyB, V]) DeleteFunc(del func(KeyA, KeyB, V) bool) {
+func (m *BiKeyMap[A, B, V]) DeleteFunc(del func(A, B, V) bool) {
 	for keyA, e := range m.byKeyA {
 		if del(keyA, e.keyB, e.value) {
 			delete(m.byKeyA, keyA)
@@ -216,8 +217,8 @@ func (m *BiKeyMap[KeyA, KeyB, V]) DeleteFunc(del func(KeyA, KeyB, V) bool) {
 
 // Clone returns a copy of the map with its own keys.
 // The values are copied with assignment, like maps.Clone does, so this is a shallow clone.
-func (m *BiKeyMap[KeyA, KeyB, V]) Clone() *BiKeyMap[KeyA, KeyB, V] {
-	return &BiKeyMap[KeyA, KeyB, V]{
+func (m *BiKeyMap[A, B, V]) Clone() *BiKeyMap[A, B, V] {
+	return &BiKeyMap[A, B, V]{
 		byKeyA: maps.Clone(m.byKeyA),
 		byKeyB: maps.Clone(m.byKeyB),
 	}
@@ -226,7 +227,7 @@ func (m *BiKeyMap[KeyA, KeyB, V]) Clone() *BiKeyMap[KeyA, KeyB, V] {
 // Clear removes all elements from the map.
 // Like clear on a Go map, it keeps the allocated memory,
 // and an iteration that is running yields no further entries.
-func (m *BiKeyMap[KeyA, KeyB, V]) Clear() {
+func (m *BiKeyMap[A, B, V]) Clear() {
 	// clear instead of resetting the struct: a running range keeps the old
 	// maps and would go on yielding their entries.
 	clear(m.byKeyA)
@@ -234,13 +235,13 @@ func (m *BiKeyMap[KeyA, KeyB, V]) Clear() {
 }
 
 // String returns a string representation of the map.
-func (m *BiKeyMap[KeyA, KeyB, V]) String() string {
+func (m *BiKeyMap[A, B, V]) String() string {
 	return fmt.Sprint("BiKeyMap: ", m.values())
 }
 
-// values returns a new map[KeyA]V, which fmt prints sorted by key.
-func (m *BiKeyMap[KeyA, KeyB, V]) values() map[KeyA]V {
-	values := make(map[KeyA]V, len(m.byKeyA))
+// values returns a new map[A]V, which fmt prints sorted by key.
+func (m *BiKeyMap[A, B, V]) values() map[A]V {
+	values := make(map[A]V, len(m.byKeyA))
 	for keyA, e := range m.byKeyA {
 		values[keyA] = e.value
 	}

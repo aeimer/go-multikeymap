@@ -13,15 +13,15 @@ import (
 // Therefore, it is slower than BiKeyMap, but it is safe for concurrent use.
 // The zero value is an empty map ready to use.
 // A ConcurrentBiKeyMap must not be copied after first use.
-type ConcurrentBiKeyMap[KeyA comparable, KeyB comparable, V any] struct {
+type ConcurrentBiKeyMap[A comparable, B comparable, V any] struct {
 	mu sync.RWMutex
-	m  BiKeyMap[KeyA, KeyB, V]
+	m  BiKeyMap[A, B, V]
 }
 
 // NewConcurrent returns a new empty ConcurrentBiKeyMap.
-// It is equivalent to new(ConcurrentBiKeyMap[KeyA, KeyB, V]).
-func NewConcurrent[KeyA comparable, KeyB comparable, V any]() *ConcurrentBiKeyMap[KeyA, KeyB, V] {
-	return new(ConcurrentBiKeyMap[KeyA, KeyB, V])
+// It is equivalent to new(ConcurrentBiKeyMap[A, B, V]).
+func NewConcurrent[A comparable, B comparable, V any]() *ConcurrentBiKeyMap[A, B, V] {
+	return new(ConcurrentBiKeyMap[A, B, V])
 }
 
 // Set stores value under keyA and keyB and pairs the two keys.
@@ -33,21 +33,21 @@ func NewConcurrent[KeyA comparable, KeyB comparable, V any]() *ConcurrentBiKeyMa
 // Len grows by one if both keys are new, shrinks by one if both cases above apply,
 // and stays the same otherwise.
 // The removals and the store happen atomically.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Set(keyA KeyA, keyB KeyB, value V) {
+func (c *ConcurrentBiKeyMap[A, B, V]) Set(keyA A, keyB B, value V) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.m.Set(keyA, keyB, value)
 }
 
 // GetByKeyA retrieves a value using the first key.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) GetByKeyA(keyA KeyA) (V, bool) {
+func (c *ConcurrentBiKeyMap[A, B, V]) GetByKeyA(keyA A) (V, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.m.GetByKeyA(keyA)
 }
 
 // GetByKeyB retrieves a value using the second key.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) GetByKeyB(keyB KeyB) (V, bool) {
+func (c *ConcurrentBiKeyMap[A, B, V]) GetByKeyB(keyB B) (V, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.m.GetByKeyB(keyB)
@@ -55,7 +55,7 @@ func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) GetByKeyB(keyB KeyB) (V, bool) {
 
 // KeyA returns the keyA paired with keyB.
 // The bool reports whether keyB exists.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) KeyA(keyB KeyB) (KeyA, bool) {
+func (c *ConcurrentBiKeyMap[A, B, V]) KeyA(keyB B) (A, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.m.KeyA(keyB)
@@ -63,7 +63,7 @@ func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) KeyA(keyB KeyB) (KeyA, bool) {
 
 // KeyB returns the keyB paired with keyA.
 // The bool reports whether keyA exists.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) KeyB(keyA KeyA) (KeyB, bool) {
+func (c *ConcurrentBiKeyMap[A, B, V]) KeyB(keyA A) (B, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.m.KeyB(keyA)
@@ -71,7 +71,7 @@ func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) KeyB(keyA KeyA) (KeyB, bool) {
 
 // DeleteByKeyA removes the value stored under keyA and the paired keyB.
 // If keyA does not exist, DeleteByKeyA is a no-op.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) DeleteByKeyA(keyA KeyA) {
+func (c *ConcurrentBiKeyMap[A, B, V]) DeleteByKeyA(keyA A) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.m.DeleteByKeyA(keyA)
@@ -79,7 +79,7 @@ func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) DeleteByKeyA(keyA KeyA) {
 
 // DeleteByKeyB removes the value stored under keyB and the paired keyA.
 // If keyB does not exist, DeleteByKeyB is a no-op.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) DeleteByKeyB(keyB KeyB) {
+func (c *ConcurrentBiKeyMap[A, B, V]) DeleteByKeyB(keyB B) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.m.DeleteByKeyB(keyB)
@@ -89,7 +89,7 @@ func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) DeleteByKeyB(keyB KeyB) {
 // and returns the previous value, if any.
 // The bool reports whether keyA existed.
 // The lookup and the delete happen atomically.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) LoadAndDeleteByKeyA(keyA KeyA) (V, bool) {
+func (c *ConcurrentBiKeyMap[A, B, V]) LoadAndDeleteByKeyA(keyA A) (V, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.m.LoadAndDeleteByKeyA(keyA)
@@ -99,14 +99,14 @@ func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) LoadAndDeleteByKeyA(keyA KeyA) (V, b
 // and returns the previous value, if any.
 // The bool reports whether keyB existed.
 // The lookup and the delete happen atomically.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) LoadAndDeleteByKeyB(keyB KeyB) (V, bool) {
+func (c *ConcurrentBiKeyMap[A, B, V]) LoadAndDeleteByKeyB(keyB B) (V, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.m.LoadAndDeleteByKeyB(keyB)
 }
 
 // Len returns the number of values in the map.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Len() int {
+func (c *ConcurrentBiKeyMap[A, B, V]) Len() int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.m.Len()
@@ -116,7 +116,7 @@ func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Len() int {
 // The iteration order is unspecified, like for a Go map.
 // Each iteration sees a snapshot taken when it starts and holds no lock while it runs,
 // so the loop body may modify the map.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) All() iter.Seq2[KeyA, V] {
+func (c *ConcurrentBiKeyMap[A, B, V]) All() iter.Seq2[A, V] {
 	return snapshot2(&c.mu, c.m.All)
 }
 
@@ -124,7 +124,7 @@ func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) All() iter.Seq2[KeyA, V] {
 // The iteration order is unspecified, like for a Go map.
 // Each iteration sees a snapshot taken when it starts and holds no lock while it runs,
 // so the loop body may modify the map.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Pairs() iter.Seq2[KeyA, KeyB] {
+func (c *ConcurrentBiKeyMap[A, B, V]) Pairs() iter.Seq2[A, B] {
 	return snapshot2(&c.mu, c.m.Pairs)
 }
 
@@ -132,7 +132,7 @@ func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Pairs() iter.Seq2[KeyA, KeyB] {
 // The iteration order is unspecified, like for a Go map.
 // Each iteration sees a snapshot taken when it starts and holds no lock while it runs,
 // so the loop body may modify the map.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) KeysA() iter.Seq[KeyA] {
+func (c *ConcurrentBiKeyMap[A, B, V]) KeysA() iter.Seq[A] {
 	return snapshot(&c.mu, c.m.KeysA)
 }
 
@@ -140,7 +140,7 @@ func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) KeysA() iter.Seq[KeyA] {
 // The iteration order is unspecified, like for a Go map.
 // Each iteration sees a snapshot taken when it starts and holds no lock while it runs,
 // so the loop body may modify the map.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) KeysB() iter.Seq[KeyB] {
+func (c *ConcurrentBiKeyMap[A, B, V]) KeysB() iter.Seq[B] {
 	return snapshot(&c.mu, c.m.KeysB)
 }
 
@@ -148,14 +148,14 @@ func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) KeysB() iter.Seq[KeyB] {
 // The iteration order is unspecified, like for a Go map.
 // Each iteration sees a snapshot taken when it starts and holds no lock while it runs,
 // so the loop body may modify the map.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Values() iter.Seq[V] {
+func (c *ConcurrentBiKeyMap[A, B, V]) Values() iter.Seq[V] {
 	return snapshot(&c.mu, c.m.Values)
 }
 
 // DeleteFunc removes every value for which del returns true, together with its keyA and keyB.
 // del runs while DeleteFunc holds the write lock,
 // so del must not call methods of the same map, or it deadlocks.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) DeleteFunc(del func(KeyA, KeyB, V) bool) {
+func (c *ConcurrentBiKeyMap[A, B, V]) DeleteFunc(del func(A, B, V) bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.m.DeleteFunc(del)
@@ -163,24 +163,24 @@ func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) DeleteFunc(del func(KeyA, KeyB, V) b
 
 // Clone returns a copy of the map with its own keys and its own lock.
 // The values are copied with assignment, like maps.Clone does, so this is a shallow clone.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Clone() *ConcurrentBiKeyMap[KeyA, KeyB, V] {
+func (c *ConcurrentBiKeyMap[A, B, V]) Clone() *ConcurrentBiKeyMap[A, B, V] {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return &ConcurrentBiKeyMap[KeyA, KeyB, V]{m: *c.m.Clone()}
+	return &ConcurrentBiKeyMap[A, B, V]{m: *c.m.Clone()}
 }
 
 // Clear removes all elements from the map and releases their memory.
 // Iterations that are running are not affected, because they work on a snapshot.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Clear() {
+func (c *ConcurrentBiKeyMap[A, B, V]) Clear() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	// Reset instead of clear: the iterators work on snapshots, so clearing
 	// in place would only cost time under the lock and keep the memory.
-	c.m = BiKeyMap[KeyA, KeyB, V]{}
+	c.m = BiKeyMap[A, B, V]{}
 }
 
 // String returns a string representation of the map.
-func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) String() string {
+func (c *ConcurrentBiKeyMap[A, B, V]) String() string {
 	// All copies the entries under the read lock and yields them without it,
 	// so a value's String method may call back into the map without a deadlock.
 	// Collecting into a map lets fmt sort the keys like the plain String does.
