@@ -46,6 +46,22 @@ func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) GetByKeyB(keyB KeyB) (V, bool) {
 	return c.m.GetByKeyB(keyB)
 }
 
+// KeyA returns the keyA paired with keyB.
+// The bool reports whether keyB exists.
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) KeyA(keyB KeyB) (KeyA, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.m.KeyA(keyB)
+}
+
+// KeyB returns the keyB paired with keyA.
+// The bool reports whether keyA exists.
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) KeyB(keyA KeyA) (KeyB, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.m.KeyB(keyA)
+}
+
 // DeleteByKeyA removes the value stored under keyA and the paired keyB.
 // If keyA does not exist, DeleteByKeyA is a no-op.
 func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) DeleteByKeyA(keyA KeyA) {

@@ -94,6 +94,29 @@ func (m *MultiKeyMap[K, V]) HasSecondaryKey(group string, key string) bool {
 	return false
 }
 
+// PrimaryKey returns the primary key that the secondary key in group points to.
+// The bool reports whether the secondary key exists.
+func (m *MultiKeyMap[K, V]) PrimaryKey(group string, key string) (K, bool) {
+	primaryKey, exists := m.secondary[group][key]
+	return primaryKey, exists
+}
+
+// SecondaryKeys returns an iterator over the secondary keys of primaryKey
+// as pairs of group and key.
+// The iteration order is unspecified, like for a Go map.
+// If primaryKey has no secondary keys, the iterator yields nothing.
+func (m *MultiKeyMap[K, V]) SecondaryKeys(primaryKey K) iter.Seq2[string, string] {
+	return func(yield func(string, string) bool) {
+		for group, keys := range m.secondaryTo[primaryKey] {
+			for key := range keys {
+				if !yield(group, key) {
+					return
+				}
+			}
+		}
+	}
+}
+
 // KeyGroups returns a copy of all key groups,
 // mapping group to secondary key to primary key.
 // Changes to the result do not affect the map.

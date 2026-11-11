@@ -224,6 +224,25 @@ func TestBiKeyMap_IteratorsReadMapWhenIterationStarts(t *testing.T) {
 	assert.Equal(t, []int{1}, slices.Collect(keysB))
 }
 
+func TestBiKeyMap_KeyAAndKeyB(t *testing.T) {
+	bm := New[string, int, string]()
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+
+	keyA, ok := bm.KeyA(1)
+	assert.True(t, ok)
+	assert.Equal(t, "keyA1", keyA)
+	keyB, ok := bm.KeyB("keyA1")
+	assert.True(t, ok)
+	assert.Equal(t, 1, keyB)
+
+	keyA, ok = bm.KeyA(2)
+	assert.False(t, ok)
+	assert.Empty(t, keyA)
+	keyB, ok = bm.KeyB("missing")
+	assert.False(t, ok)
+	assert.Zero(t, keyB)
+}
+
 // Benchmarks
 
 var benchmarkSizes = []struct {
