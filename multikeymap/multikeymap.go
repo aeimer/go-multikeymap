@@ -3,6 +3,7 @@ package multikeymap
 import (
 	"fmt"
 	"iter"
+	"maps"
 )
 
 // MultiKeyMap is a generic in-memory map with a primary key and multiple secondary keys.
@@ -284,6 +285,38 @@ func (m *MultiKeyMap[K, V]) Values() iter.Seq[V] {
 			}
 		}
 	}
+}
+
+// DeleteFunc removes every primary key for which del returns true,
+// together with its value and all its secondary keys.
+func (m *MultiKeyMap[K, V]) DeleteFunc(del func(K, V) bool) {
+	for k, v := range m.primary {
+		if del(k, v) {
+			m.Delete(k)
+		}
+	}
+}
+
+// Clone returns a copy of the map with its own primary and secondary keys.
+// The values are copied with assignment, like maps.Clone does, so this is a shallow clone.
+func (m *MultiKeyMap[K, V]) Clone() *MultiKeyMap[K, V] {
+	c := &MultiKeyMap[K, V]{primary: maps.Clone(m.primary)}
+	if m.secondary == nil {
+		return c
+	}
+	c.secondary = make(map[string]map[string]K, len(m.secondary))
+	for group, keys := range m.secondary {
+		c.secondary[group] = maps.Clone(keys)
+	}
+	c.secondaryTo = make(map[K]map[string]map[string]struct{}, len(m.secondaryTo))
+	for primaryKey, groups := range m.secondaryTo {
+		cg := make(map[string]map[string]struct{}, len(groups))
+		for group, keys := range groups {
+			cg[group] = maps.Clone(keys)
+		}
+		c.secondaryTo[primaryKey] = cg
+	}
+	return c
 }
 
 // Clear removes all elements from the map.

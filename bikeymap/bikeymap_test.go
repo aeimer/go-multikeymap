@@ -290,6 +290,63 @@ func TestBiKeyMap_LoadAndDeleteByKeyB(t *testing.T) {
 	assert.False(t, loaded)
 }
 
+func TestBiKeyMap_Clone(t *testing.T) {
+	bm := New[string, int, string]()
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+
+	clone := bm.Clone()
+	assert.Equal(t, maps.Collect(bm.All()), maps.Collect(clone.All()))
+
+	// Changes to the clone and to the original stay apart.
+	require.NoError(t, clone.Set("keyA1", 1, "changed"))
+	require.NoError(t, clone.Set("keyA3", 3, "value3"))
+	clone.DeleteByKeyB(2)
+	require.NoError(t, bm.Set("keyA4", 4, "value4"))
+
+	assert.Equal(t, map[string]string{"keyA1": "value1", "keyA2": "value2", "keyA4": "value4"}, maps.Collect(bm.All()))
+	assert.ElementsMatch(t, []int{1, 2, 4}, slices.Collect(bm.KeysB()))
+	assert.Equal(t, map[string]string{"keyA1": "changed", "keyA3": "value3"}, maps.Collect(clone.All()))
+	assert.ElementsMatch(t, []int{1, 3}, slices.Collect(clone.KeysB()))
+}
+
+func TestBiKeyMap_CloneCopiesValuesShallowly(t *testing.T) {
+	bm := New[string, int, *int]()
+	value := 1
+	require.NoError(t, bm.Set("keyA1", 1, &value))
+	clone := bm.Clone()
+	got, _ := clone.GetByKeyA("keyA1")
+	assert.Same(t, &value, got)
+}
+
+func TestBiKeyMap_CloneZeroValue(t *testing.T) {
+	var bm BiKeyMap[string, int, string]
+	clone := bm.Clone()
+	assert.Equal(t, 0, clone.Len())
+	require.NoError(t, clone.Set("keyA1", 1, "value1"))
+	assert.Equal(t, 0, bm.Len())
+}
+
+func TestBiKeyMap_DeleteFunc(t *testing.T) {
+	bm := New[string, int, string]()
+	for i := range 4 {
+		require.NoError(t, bm.Set("keyA"+strconv.Itoa(i), i, "value"+strconv.Itoa(i)))
+	}
+	bm.DeleteFunc(func(keyA string, keyB int, value string) bool {
+		assert.Equal(t, "keyA"+strconv.Itoa(keyB), keyA)
+		assert.Equal(t, "value"+strconv.Itoa(keyB), value)
+		return keyB%2 == 1
+	})
+	assert.Equal(t, map[string]string{"keyA0": "value0", "keyA2": "value2"}, maps.Collect(bm.All()))
+	assert.ElementsMatch(t, []int{0, 2}, slices.Collect(bm.KeysB()))
+}
+
+func TestBiKeyMap_DeleteFuncZeroValue(t *testing.T) {
+	var bm BiKeyMap[string, int, string]
+	bm.DeleteFunc(func(string, int, string) bool { return true })
+	assert.Equal(t, 0, bm.Len())
+}
+
 // Benchmarks
 
 var benchmarkSizes = []struct {

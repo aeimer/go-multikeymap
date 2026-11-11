@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"maps"
 )
 
 // ErrKeyAConflict is returned by Set when keyA is already paired with a different keyB.
@@ -187,6 +188,25 @@ func (m *BiKeyMap[KeyA, KeyB, V]) Values() iter.Seq[V] {
 				return
 			}
 		}
+	}
+}
+
+// DeleteFunc removes every value for which del returns true, together with its keyA and keyB.
+func (m *BiKeyMap[KeyA, KeyB, V]) DeleteFunc(del func(KeyA, KeyB, V) bool) {
+	for keyA, e := range m.byKeyA {
+		if del(keyA, e.keyB, e.value) {
+			delete(m.byKeyA, keyA)
+			delete(m.byKeyB, e.keyB)
+		}
+	}
+}
+
+// Clone returns a copy of the map with its own keys.
+// The values are copied with assignment, like maps.Clone does, so this is a shallow clone.
+func (m *BiKeyMap[KeyA, KeyB, V]) Clone() *BiKeyMap[KeyA, KeyB, V] {
+	return &BiKeyMap[KeyA, KeyB, V]{
+		byKeyA: maps.Clone(m.byKeyA),
+		byKeyB: maps.Clone(m.byKeyB),
 	}
 }
 

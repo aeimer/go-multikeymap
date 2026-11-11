@@ -196,6 +196,24 @@ func (c *ConcurrentMultiKeyMap[K, V]) Values() iter.Seq[V] {
 	return snapshot(&c.mu, c.m.Values)
 }
 
+// DeleteFunc removes every primary key for which del returns true,
+// together with its value and all its secondary keys.
+// del runs while DeleteFunc holds the write lock,
+// so del must not call methods of the same map, or it deadlocks.
+func (c *ConcurrentMultiKeyMap[K, V]) DeleteFunc(del func(K, V) bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.m.DeleteFunc(del)
+}
+
+// Clone returns a copy of the map with its own primary and secondary keys and its own lock.
+// The values are copied with assignment, like maps.Clone does, so this is a shallow clone.
+func (c *ConcurrentMultiKeyMap[K, V]) Clone() *ConcurrentMultiKeyMap[K, V] {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return &ConcurrentMultiKeyMap[K, V]{m: *c.m.Clone()}
+}
+
 // Clear removes all elements from the map.
 func (c *ConcurrentMultiKeyMap[K, V]) Clear() {
 	c.mu.Lock()
