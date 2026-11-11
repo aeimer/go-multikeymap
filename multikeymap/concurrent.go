@@ -26,10 +26,10 @@ func (c *ConcurrentMultiKeyMap[K, V]) Put(primaryKey K, value V) {
 }
 
 // PutSecondaryKeys adds secondary keys under a group for a primary key.
-func (c *ConcurrentMultiKeyMap[K, V]) PutSecondaryKeys(primaryKey K, group string, keys ...string) {
+func (c *ConcurrentMultiKeyMap[K, V]) PutSecondaryKeys(primaryKey K, group string, keys ...string) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.m.PutSecondaryKeys(primaryKey, group, keys...)
+	return c.m.PutSecondaryKeys(primaryKey, group, keys...)
 }
 
 // HasPrimaryKey checks if a primary key exists.

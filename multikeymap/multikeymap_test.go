@@ -50,6 +50,17 @@ func TestMultiKeyMap_SetSecondaryKeys(t *testing.T) {
 	}
 }
 
+func TestMultiKeyMap_PutSecondaryKeysReportsMissingPrimaryKey(t *testing.T) {
+	mm := New[string, int]()
+	assert.False(t, mm.PutSecondaryKeys("missing", "group1", "secKey1"))
+	assert.False(t, mm.HasSecondaryKey("group1", "secKey1"))
+	assert.Empty(t, mm.GetAllKeyGroups())
+
+	mm.Put("key1", 1)
+	assert.True(t, mm.PutSecondaryKeys("key1", "group1", "secKey1"))
+	assert.True(t, mm.HasSecondaryKey("group1", "secKey1"))
+}
+
 func TestMultiKeyMap_HasPrimaryKey(t *testing.T) {
 	mm := New[string, int]()
 	mm.Put("key1", 1)
