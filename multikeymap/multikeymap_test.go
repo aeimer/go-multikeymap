@@ -356,6 +356,80 @@ func TestMultiKeyMap_SecondaryKeysStopsEarly(t *testing.T) {
 	assert.Equal(t, 1, count)
 }
 
+func TestMultiKeyMap_LoadOrStore(t *testing.T) {
+	var mm MultiKeyMap[string, int]
+	actual, loaded := mm.LoadOrStore("key1", 1)
+	assert.False(t, loaded)
+	assert.Equal(t, 1, actual)
+
+	mm.AddSecondaryKeys("key1", "group1", "secKey1")
+	actual, loaded = mm.LoadOrStore("key1", 2)
+	assert.True(t, loaded)
+	assert.Equal(t, 1, actual)
+	value, _ := mm.GetBySecondaryKey("group1", "secKey1")
+	assert.Equal(t, 1, value)
+}
+
+func TestMultiKeyMap_LoadAndDelete(t *testing.T) {
+	var mm MultiKeyMap[string, int]
+	_, loaded := mm.LoadAndDelete("key1")
+	assert.False(t, loaded)
+
+	mm.Set("key1", 1)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1")
+	value, loaded := mm.LoadAndDelete("key1")
+	assert.True(t, loaded)
+	assert.Equal(t, 1, value)
+	assert.False(t, mm.Has("key1"))
+	assert.False(t, mm.HasSecondaryKey("group1", "secKey1"))
+	assert.Empty(t, mm.KeyGroups())
+
+	_, loaded = mm.LoadAndDelete("key1")
+	assert.False(t, loaded)
+}
+
+func TestMultiKeyMap_UpdateCreatesMissingKey(t *testing.T) {
+	var mm MultiKeyMap[string, int]
+	mm.Update("key1", func(old int, exists bool) (int, bool) {
+		assert.False(t, exists)
+		assert.Equal(t, 0, old)
+		return 1, true
+	})
+	value, ok := mm.Get("key1")
+	assert.True(t, ok)
+	assert.Equal(t, 1, value)
+}
+
+func TestMultiKeyMap_UpdateReplacesValueAndKeepsSecondaryKeys(t *testing.T) {
+	mm := New[string, int]()
+	mm.Set("key1", 1)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1")
+	mm.Update("key1", func(old int, exists bool) (int, bool) {
+		assert.True(t, exists)
+		return old + 1, true
+	})
+	value, ok := mm.GetBySecondaryKey("group1", "secKey1")
+	assert.True(t, ok)
+	assert.Equal(t, 2, value)
+}
+
+func TestMultiKeyMap_UpdateDeletesExistingKey(t *testing.T) {
+	mm := New[string, int]()
+	mm.Set("key1", 1)
+	mm.AddSecondaryKeys("key1", "group1", "secKey1")
+	mm.Update("key1", func(int, bool) (int, bool) { return 0, false })
+	assert.False(t, mm.Has("key1"))
+	assert.False(t, mm.HasSecondaryKey("group1", "secKey1"))
+	assert.Empty(t, mm.KeyGroups())
+}
+
+func TestMultiKeyMap_UpdateWithoutKeepOnMissingKeyIsNoOp(t *testing.T) {
+	var mm MultiKeyMap[string, int]
+	mm.Update("key1", func(int, bool) (int, bool) { return 1, false })
+	assert.False(t, mm.Has("key1"))
+	assert.Equal(t, 0, mm.Len())
+}
+
 // Benchmarks
 
 var benchmarkSizes = []struct {

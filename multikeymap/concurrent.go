@@ -90,6 +90,39 @@ func (c *ConcurrentMultiKeyMap[K, V]) Delete(primaryKey K) {
 	c.m.Delete(primaryKey)
 }
 
+// LoadOrStore returns the value of primaryKey if it exists.
+// Otherwise, it stores value under primaryKey and returns value.
+// The loaded result is true if the value was loaded, false if stored.
+// The lookup and the store happen atomically.
+func (c *ConcurrentMultiKeyMap[K, V]) LoadOrStore(primaryKey K, value V) (actual V, loaded bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.m.LoadOrStore(primaryKey, value)
+}
+
+// LoadAndDelete removes primaryKey, its value and all its secondary keys
+// and returns the previous value, if any.
+// The loaded result reports whether primaryKey existed.
+// The lookup and the delete happen atomically.
+func (c *ConcurrentMultiKeyMap[K, V]) LoadAndDelete(primaryKey K) (value V, loaded bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.m.LoadAndDelete(primaryKey)
+}
+
+// Update calls fn with the current value of primaryKey and whether it exists.
+// If fn returns true, Update stores the returned value under primaryKey;
+// it creates primaryKey if needed and keeps its existing secondary keys.
+// If fn returns false, Update deletes primaryKey and its secondary keys like Delete;
+// if primaryKey does not exist, nothing happens.
+// The whole operation is atomic: fn runs while Update holds the write lock,
+// so fn must not call methods of the same map, or it deadlocks.
+func (c *ConcurrentMultiKeyMap[K, V]) Update(primaryKey K, fn func(old V, exists bool) (V, bool)) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.m.Update(primaryKey, fn)
+}
+
 // Get returns a value by primary key.
 func (c *ConcurrentMultiKeyMap[K, V]) Get(primaryKey K) (V, bool) {
 	c.mu.RLock()

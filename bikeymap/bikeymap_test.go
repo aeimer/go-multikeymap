@@ -254,6 +254,42 @@ func TestBiKeyMap_KeyAAndKeyB(t *testing.T) {
 	assert.Zero(t, keyB)
 }
 
+func TestBiKeyMap_LoadAndDeleteByKeyA(t *testing.T) {
+	var bm BiKeyMap[string, int, string]
+	_, loaded := bm.LoadAndDeleteByKeyA("keyA1")
+	assert.False(t, loaded)
+
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	value, loaded := bm.LoadAndDeleteByKeyA("keyA1")
+	assert.True(t, loaded)
+	assert.Equal(t, "value1", value)
+	_, ok := bm.GetByKeyB(1)
+	assert.False(t, ok)
+	assert.Equal(t, 1, bm.Len())
+
+	_, loaded = bm.LoadAndDeleteByKeyA("keyA1")
+	assert.False(t, loaded)
+}
+
+func TestBiKeyMap_LoadAndDeleteByKeyB(t *testing.T) {
+	var bm BiKeyMap[string, int, string]
+	_, loaded := bm.LoadAndDeleteByKeyB(1)
+	assert.False(t, loaded)
+
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	value, loaded := bm.LoadAndDeleteByKeyB(1)
+	assert.True(t, loaded)
+	assert.Equal(t, "value1", value)
+	_, ok := bm.GetByKeyA("keyA1")
+	assert.False(t, ok)
+	assert.Equal(t, 1, bm.Len())
+
+	_, loaded = bm.LoadAndDeleteByKeyB(1)
+	assert.False(t, loaded)
+}
+
 // Benchmarks
 
 var benchmarkSizes = []struct {

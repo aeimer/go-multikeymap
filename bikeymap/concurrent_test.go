@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -383,6 +384,66 @@ func TestConcurrentBiKeyMap_ZeroValueWrites(t *testing.T) {
 	bm.Clear()
 	require.NoError(t, bm.Set("keyA2", 2, "value2"))
 	assert.Equal(t, 1, bm.Len())
+}
+
+func TestConcurrentBiKeyMap_LoadAndDeleteByKeyA(t *testing.T) {
+	var bm ConcurrentBiKeyMap[string, int, string]
+	_, loaded := bm.LoadAndDeleteByKeyA("keyA1")
+	assert.False(t, loaded)
+
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	value, loaded := bm.LoadAndDeleteByKeyA("keyA1")
+	assert.True(t, loaded)
+	assert.Equal(t, "value1", value)
+	_, ok := bm.GetByKeyB(1)
+	assert.False(t, ok)
+	assert.Equal(t, 1, bm.Len())
+
+	_, loaded = bm.LoadAndDeleteByKeyA("keyA1")
+	assert.False(t, loaded)
+}
+
+func TestConcurrentBiKeyMap_LoadAndDeleteByKeyB(t *testing.T) {
+	var bm ConcurrentBiKeyMap[string, int, string]
+	_, loaded := bm.LoadAndDeleteByKeyB(1)
+	assert.False(t, loaded)
+
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	value, loaded := bm.LoadAndDeleteByKeyB(1)
+	assert.True(t, loaded)
+	assert.Equal(t, "value1", value)
+	_, ok := bm.GetByKeyA("keyA1")
+	assert.False(t, ok)
+	assert.Equal(t, 1, bm.Len())
+
+	_, loaded = bm.LoadAndDeleteByKeyB(1)
+	assert.False(t, loaded)
+}
+
+func TestConcurrentBiKeyMap_LoadAndDeleteLoadsOnce(t *testing.T) {
+	var bm ConcurrentBiKeyMap[string, int, string]
+	require.NoError(t, bm.Set("keyA1", 1, "value1"))
+	require.NoError(t, bm.Set("keyA2", 2, "value2"))
+	var wg sync.WaitGroup
+	var loadedA, loadedB atomic.Int32
+	for range 100 {
+		wg.Go(func() {
+			if _, loaded := bm.LoadAndDeleteByKeyA("keyA1"); loaded {
+				loadedA.Add(1)
+			}
+		})
+		wg.Go(func() {
+			if _, loaded := bm.LoadAndDeleteByKeyB(2); loaded {
+				loadedB.Add(1)
+			}
+		})
+	}
+	wg.Wait()
+	assert.Equal(t, int32(1), loadedA.Load())
+	assert.Equal(t, int32(1), loadedB.Load())
+	assert.Equal(t, 0, bm.Len())
 }
 
 // Benchmarks

@@ -79,6 +79,26 @@ func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) DeleteByKeyB(keyB KeyB) {
 	c.m.DeleteByKeyB(keyB)
 }
 
+// LoadAndDeleteByKeyA removes the value stored under keyA and the paired keyB
+// and returns the previous value, if any.
+// The bool reports whether keyA existed.
+// The lookup and the delete happen atomically.
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) LoadAndDeleteByKeyA(keyA KeyA) (V, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.m.LoadAndDeleteByKeyA(keyA)
+}
+
+// LoadAndDeleteByKeyB removes the value stored under keyB and the paired keyA
+// and returns the previous value, if any.
+// The bool reports whether keyB existed.
+// The lookup and the delete happen atomically.
+func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) LoadAndDeleteByKeyB(keyB KeyB) (V, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.m.LoadAndDeleteByKeyB(keyB)
+}
+
 // Len returns the number of values in the map.
 func (c *ConcurrentBiKeyMap[KeyA, KeyB, V]) Len() int {
 	c.mu.RLock()
