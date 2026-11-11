@@ -76,6 +76,38 @@ func ExampleMultiKeyMap_SecondaryKeys() {
 	// [plate=B postcode=10115]
 }
 
+func ExampleMultiKeyMap_Groups() {
+	m := multikeymap.New[string, int]()
+	m.Set("berlin", 3_500_000)
+	m.AddSecondaryKeys("berlin", "postcode", "10115")
+	m.AddSecondaryKeys("berlin", "plate", "B")
+
+	// The iteration order is unspecified; sort for stable output.
+	fmt.Println(slices.Sorted(m.Groups()))
+
+	// Output:
+	// [plate postcode]
+}
+
+func ExampleMultiKeyMap_GroupKeys() {
+	m := multikeymap.New[string, int]()
+	m.Set("berlin", 3_500_000)
+	m.Set("hamburg", 1_800_000)
+	m.AddSecondaryKeys("berlin", "postcode", "10115", "10117")
+	m.AddSecondaryKeys("hamburg", "postcode", "20095")
+
+	// The iteration order is unspecified; collect and sort for stable output.
+	postcodes := maps.Collect(m.GroupKeys("postcode"))
+	for _, postcode := range slices.Sorted(maps.Keys(postcodes)) {
+		fmt.Println(postcode, postcodes[postcode])
+	}
+
+	// Output:
+	// 10115 berlin
+	// 10117 berlin
+	// 20095 hamburg
+}
+
 func ExampleConcurrentMultiKeyMap_All() {
 	var m multikeymap.ConcurrentMultiKeyMap[string, int]
 	m.Set("berlin", 3_500_000)
